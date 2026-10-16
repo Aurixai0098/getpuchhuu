@@ -343,20 +343,25 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-white text-gray-800 border-b border-gray-200 font-sans sticky top-0 z-[1000] shadow-sm">
-        <div className="max-w-[1500px] mx-auto px-4 py-3">
+      <nav className="bg-white/95 backdrop-blur-md text-gray-800 border-b border-gray-100 font-sans sticky top-0 z-[1000] shadow-[0_2px_20px_rgba(0,0,0,0.06)]">
+  <div className="max-w-[1500px] mx-auto px-4 lg:px-6 py-2">
           {/* ========== DESKTOP VIEW ========== */}
           {!isMobileView && (
             <div className="flex items-center justify-between gap-8">
               {/* Logo */}
-              <Link to="/" className="flex items-center gap-3 shrink-0 no-underline" onMouseEnter={handleLogoRotate} onClick={handleLogoRotate}>
-                <div className="rounded-lg w-20 h-20 flex items-center justify-center overflow-hidden bg-white p-1">
-                  <img src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792054212/5b371f1e-88c7-4d4f-aa47-9d3cf264ee2d.png" alt="PUCHHUU Logo" className="w-full h-full object-contain" />
-                </div>
-                {/* <div className="w-32 h-16">
-                  <img src="https://res.cloudinary.com/djtvxmttf/image/upload/v1778752596/3b3dd98d-e461-4412-ba36-b5086a6e6331.png" alt="INDIAN HOMEY" className="w-full h-full object-contain" />
-                </div> */}
-              </Link>
+           {/* Logo */}
+<Link
+  to="/"
+  className="flex items-center shrink-0 no-underline"
+  onMouseEnter={handleLogoRotate}
+  onClick={handleLogoRotate}
+>
+  <img
+    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png"
+    alt="INDIAN HOMEY"
+    className={`h-16 xl:h-20 w-auto object-contain transition-transform duration-500 ${isLogoRotating ? 'scale-110' : 'scale-100'}`}
+  />
+</Link>
 
               {/* Search Bar with rotating placeholder */}
               <div className="flex-1 max-w-xl relative" ref={searchRef}>
@@ -370,7 +375,7 @@ const Navbar = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => (searchResults.categories.length > 0 || searchResults.services.length > 0) && setShowSearchDropdown(true)}
                     placeholder={rotatingPlaceholder}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-11 pr-4 py-3 bg-gray-100 border border-transparent rounded-full text-sm outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all"
                   />
                   {isSearching && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -413,12 +418,17 @@ const Navbar = () => {
 
               {/* Location Selector */}
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="text-sm text-gray-600">{location || 'Select Location'}</span>
-                <button onClick={() => setShowLocationPopup(true)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Change</button>
+               <button
+  onClick={() => setShowLocationPopup(true)}
+  className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-4 py-2.5 transition max-w-[220px]"
+>
+  <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+  <span className="text-sm font-medium text-gray-700 truncate">{location || 'Select Location'}</span>
+  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+</button>
               </div>
 
               {/* Desktop Icons & Dropdown */}
@@ -515,22 +525,13 @@ const Navbar = () => {
               {/* Top Bar: Logo | Search, Location, Notification, Avatar/Hamburger */}
               <div className="flex items-center justify-between gap-2">
                 {/* Logo */}
-                <Link to="/" className="flex shrink-0 items-center gap-2 no-underline" onClick={handleLogoRotate}>
-                  <div className="rounded-lg w-14 h-14 flex items-center justify-center overflow-hidden bg-white p-1">
-                    <img 
-                      src="https://res.cloudinary.com/djtvxmttf/image/upload/v1778658121/a7ea1860-5474-4e8d-800b-72c68b9f6b71.png" 
-                      alt="INDIAN HOMEY Logo" 
-                      className="w-full h-full object-contain" 
-                    />
-                  </div>
-                  <div className="w-24 h-12">
-                    <img 
-                      src="https://res.cloudinary.com/djtvxmttf/image/upload/v1778752596/3b3dd98d-e461-4412-ba36-b5086a6e6331.png" 
-                      alt="INDIAN HOMEY" 
-                      className="w-full h-full object-contain" 
-                    />
-                  </div>
-                </Link>
+             <Link to="/" className="flex shrink-0 items-center no-underline" onClick={handleLogoRotate}>
+  <img
+    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792054212/5b371f1e-88c7-4d4f-aa47-9d3cf264ee2d.png"
+    alt="INDIAN HOMEY"
+    className="h-12 sm:h-14 w-auto object-contain"
+  />
+</Link>
 
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Search Icon */}
@@ -559,10 +560,10 @@ const Navbar = () => {
                   {!user && <div className="w-9 h-9" /> /* placeholder to keep layout stable */}
 
                   {/* Menu button – Avatar when logged in, Hamburger when logged out */}
-                  <button 
-                    onClick={() => setMobileMenuOpen(true)} 
-                    className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden  shadow-md active:scale-95 transition-all"
-                  >
+               <button
+  onClick={() => setMobileMenuOpen(true)}
+  className="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden bg-blue-600 shadow-md active:scale-95 transition-all"
+>
                     {user ? (
                       // Logged in: show avatar or initials
                       user.avatar?.url ? (

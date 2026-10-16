@@ -63,7 +63,16 @@ const AdminCategories = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [form, setForm] = useState({ name: '', slug: '', description: '', iconUrl: '', sortOrder: 1, isActive: true });
+    // const [form, setForm] = useState({ name: '', slug: '', description: '', iconUrl: '', sortOrder: 1, isActive: true });
+    const [form, setForm] = useState({
+  name: '',
+  slug: '',
+  description: '',
+  iconUrl: '',
+  imageUrl: '',
+  sortOrder: 1,
+  isActive: true
+});
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -103,25 +112,62 @@ const AdminCategories = () => {
         setTimeout(() => setToast(null), 3000);
     };
 
+    // const handleSubmit = async (e) => {
+    //     e.preventDefault();
+    //     setSubmitting(true);
+    //     try {
+    //         if (editingId) {
+    //             await updateCategory(editingId, form);
+    //             showToast('Category updated successfully!');
+    //         } else {
+    //             await createCategory(form);
+    //             showToast('Category created successfully!');
+    //         }
+    //         resetForm();
+    //         loadCategories();
+    //     } catch (err) {
+    //         showToast(err.message || 'Something went wrong', 'error');
+    //     } finally {
+    //         setSubmitting(false);
+    //     }
+    // };
+
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            if (editingId) {
-                await updateCategory(editingId, form);
-                showToast('Category updated successfully!');
-            } else {
-                await createCategory(form);
-                showToast('Category created successfully!');
-            }
-            resetForm();
-            loadCategories();
-        } catch (err) {
-            showToast(err.message || 'Something went wrong', 'error');
-        } finally {
-            setSubmitting(false);
-        }
+  e.preventDefault();
+  setSubmitting(true);
+
+  try {
+    const categoryData = {
+      ...form,
+      icon: {
+        url: form.iconUrl || '',
+        publicId: ''
+      },
+      image: {
+        url: form.imageUrl || '',
+        publicId: ''
+      }
     };
+
+    delete categoryData.iconUrl;
+    delete categoryData.imageUrl;
+
+    if (editingId) {
+      await updateCategory(editingId, categoryData);
+      showToast('Category updated successfully!');
+    } else {
+      await createCategory(categoryData);
+      showToast('Category created successfully!');
+    }
+
+    resetForm();
+    await loadCategories();
+  } catch (err) {
+    showToast(err.message || 'Something went wrong', 'error');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
     const handleDelete = async (id) => {
         try {
@@ -134,20 +180,50 @@ const AdminCategories = () => {
         }
     };
 
-    const resetForm = () => {
-        setForm({ name: '', slug: '', description: '', iconUrl: '', sortOrder: 1, isActive: true });
-        setEditingId(null);
-        setIsFormOpen(false);
-    };
+    // const resetForm = () => {
+    //     setForm({ name: '', slug: '', description: '', iconUrl: '', sortOrder: 1, isActive: true });
+    //     setEditingId(null);
+    //     setIsFormOpen(false);
+    // };
 
-    const editCategory = (cat) => {
-        setForm({
-            ...cat,
-            iconUrl: cat.icon?.url || ''
-        });
-        setEditingId(cat._id);
-        setIsFormOpen(true);
-    };
+    const resetForm = () => {
+  setForm({
+    name: '',
+    slug: '',
+    description: '',
+    iconUrl: '',
+    imageUrl: '',
+    sortOrder: 1,
+    isActive: true
+  });
+
+  setEditingId(null);
+  setIsFormOpen(false);
+};
+
+    // const editCategory = (cat) => {
+    //     setForm({
+    //         ...cat,
+    //         iconUrl: cat.icon?.url || ''
+    //     });
+    //     setEditingId(cat._id);
+    //     setIsFormOpen(true);
+    // };
+
+const editCategory = (cat) => {
+  setForm({
+    name: cat.name || '',
+    slug: cat.slug || '',
+    description: cat.description || '',
+    iconUrl: cat.icon?.url || '',
+    imageUrl: cat.image?.url || '',
+    sortOrder: cat.sortOrder ?? 1,
+    isActive: cat.isActive ?? true
+  });
+
+  setEditingId(cat._id);
+  setIsFormOpen(true);
+};
 
     const handleSort = (key) => {
         setSortConfig(prev => ({
@@ -506,6 +582,32 @@ const AdminCategories = () => {
                                     )}
                                 </div>
                             </div>
+                            {/* Category Image URL */}
+<div>
+  <label className="block text-sm font-semibold text-slate-700 mb-2">
+    Category Image URL
+  </label>
+
+  <div className="flex gap-3">
+    <input
+      type="url"
+      value={form.imageUrl}
+      onChange={(e) =>
+        setForm({ ...form, imageUrl: e.target.value })
+      }
+      className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10 text-sm"
+      placeholder="https://example.com/category.jpg"
+    />
+
+    {form.imageUrl && (
+      <img
+        src={form.imageUrl}
+        alt="Category preview"
+        className="w-14 h-14 rounded-xl border object-cover"
+      />
+    )}
+  </div>
+</div>
 
                             {/* Sort Order & Status Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

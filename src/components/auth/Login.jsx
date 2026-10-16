@@ -273,13 +273,13 @@ const Login = ({ initialPanel = "signin" }) => {
         <div className="block sm:hidden bg-gradient-to-r from-blue-50 to-indigo-50 pt-8 pb-4 px-4 text-center">
           <div className="flex justify-center mb-2">
             <img 
-              src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533276/PhotoshopExtension_Image__1_-removebg-preview_fzvzvy.png" 
+              src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png" 
               alt="logo"
               className="h-12"
             />
           </div>
           <img 
-            src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533121/PhotoshopExtension_Image-removebg-preview_pbe76a.png" 
+            src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png" 
             alt="logo name"
             className="h-8 mx-auto"
           />
@@ -292,22 +292,13 @@ const Login = ({ initialPanel = "signin" }) => {
           {/* Left panel */}
           <div className="hidden sm:flex sm:w-2/5 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 md:p-8 flex-col items-center justify-center text-gray-600">
             <div className="mb-4">
-              <div className="flex flex-col items-center mb-3">
-                <div className="w-16 h-16 rounded-xl flex items-center justify-center">
-                  <img 
-                    src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533276/PhotoshopExtension_Image__1_-removebg-preview_fzvzvy.png" 
-                    alt="logo"
-                    className="h-full"
-                  />
-                </div>
-                <span className="text-xl font-semibold mt-1">
-                  <img 
-                    src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533121/PhotoshopExtension_Image-removebg-preview_pbe76a.png" 
-                    alt="logo name"
-                    className="h-10"
-                  />
-                </span>
-              </div>
+           <div className="flex flex-col items-center mb-3">
+  <img
+    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png"
+    alt="INDIAN HOMEY"
+    className="h-20 sm:h-24 md:h-28 w-auto object-contain"
+  />
+</div>
               {activePanel === "signin" ? (
                 <>
                   <h2 className="text-2xl font-bold mb-1">Welcome back!</h2>

@@ -33,8 +33,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-16">
           <div className="col-span-1">
             <h2 className="text-3xl font-bold flex flex-row  items-center gap-3  mb-6">
-              <img src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533276/PhotoshopExtension_Image__1_-removebg-preview_fzvzvy.png" alt="logo"  className='h-14 md:h-20' />
-              <img src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533121/PhotoshopExtension_Image-removebg-preview_pbe76a.png" alt="name logo" className='h-14' />
+              <img src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png" alt="logo"  className='h-14 md:h-20' />
+              {/* <img src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533121/PhotoshopExtension_Image-removebg-preview_pbe76a.png" alt="name logo" className='h-14' /> */}
             </h2>
             <div className="space-y-4">
               <div>

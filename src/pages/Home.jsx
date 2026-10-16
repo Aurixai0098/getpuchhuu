@@ -150,8 +150,8 @@ export default function Home() {
     }
   };
 
-  const desktopBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1779629942/ChatGPT_Image_May_24_2026_07_07_18_PM_idtagr.png";
-  const mobileBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1779630617/ChatGPT_Image_May_24_2026_07_20_07_PM_mx6cxe.png";
+  const desktopBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792055959/378c9470-484d-4d3e-b4d1-9054b714fd20.png";
+  const mobileBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792056840/2d4d7f45-ad4b-4d54-8909-ff4a8e037115.png";
 
   if (loading) {
     return (
@@ -161,7 +161,7 @@ export default function Home() {
             <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <img
-                src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533276/PhotoshopExtension_Image__1_-removebg-preview_fzvzvy.png"
+                src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792055094/452dcd67-1b04-471b-b09c-ce971e99855d.png"
                 alt="INDIAN HOMEY"
                 className="w-20 h-20 object-contain"
               />
@@ -178,21 +178,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white font-sans overflow-x-hidden">
       {/* Hero Section */}
-      <section
-        className="relative w-full overflow-hidden bg-cover bg-center bg-no-repeat flex items-center"
-        style={{
-          backgroundImage: `url('${isMobile ? mobileBgImage : desktopBgImage}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          minHeight: heroMinHeight,
-          height: 'auto'
-        }}
-      >
-        <div className="absolute inset-0 z-0"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 w-full py-12 md:py-16">
-          <div className="flex flex-col items-center text-center"></div>
-        </div>
-      </section>
+{/* Hero Section */}
+<section className="relative w-full bg-white">
+  <picture>
+    {/* Mobile image */}
+    <source media="(max-width: 767px)" srcSet={mobileBgImage} />
+    {/* Desktop image */}
+    <img
+      src={desktopBgImage}
+      alt="INDIAN HOMEY"
+      className="block w-full h-auto"
+      loading="eager"
+      fetchpriority="high"
+    />
+  </picture>
+</section>
 
       {/* All Categories Banner */}
       <section className="py-8 w-full bg-white">

@@ -39,11 +39,11 @@ const Footer = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Feel free to reach us at:</p>
-                <a href="mailto:help@indianhomey.com" className="text-[#22c55e] hover:underline block">help@indianhomey.com</a>
+                <a href="mailto:help@indianhomey.com" className="text-[#22c55e] hover:underline block">help@puchhuu.com</a>
               </div>
               <div>
                 <p className="text-sm text-gray-400 mb-1">Careers:</p>
-                <a href="mailto:careers@indianhomey.com" className="text-[#22c55e] hover:underline block">careers@indianhomey.com</a>
+                <a href="mailto:careers@indianhomey.com" className="text-[#22c55e] hover:underline block">careers@puchhuu.com</a>
               </div>
             </div>
           </div>
@@ -60,9 +60,9 @@ const Footer = () => {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest mb-6">Company</h4>
             <ul className="space-y-4 text-sm text-gray-300">
-              <li><a href="register-provider" className="hover:text-white">Become a INDIAN HOMEY Professional</a></li>
-              <li><a href="#" className="hover:text-white">Become a INDIAN HOMEY Buddy</a></li>
-              <li><a href="#" className="hover:text-white">Request INDIAN HOMEY in your locality</a></li>
+              <li><a href="register-provider" className="hover:text-white">Become a puchhuu Professional</a></li>
+              <li><a href="#" className="hover:text-white">Become a puchhuu Buddy</a></li>
+              <li><a href="#" className="hover:text-white">Request puchhuu in your locality</a></li>
             </ul>
           </div>
 
@@ -79,7 +79,7 @@ const Footer = () => {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest mb-6">Press</h4>
             <ul className="space-y-4 text-sm text-gray-300">
-              <li><a href="mailto:press@indianhomey.com" className="text-[#22c55e] hover:underline">press@indianhomey.com</a></li>
+              <li><a href="mailto:press@indianhomey.com" className="text-[#22c55e] hover:underline">press@puchhuu.com</a></li>
               <li><a href="#" className="hover:text-white">Press Kit</a></li>
             </ul>
           </div>
@@ -166,7 +166,7 @@ const Footer = () => {
             </a>
           </div>
           <p className="text-xs text-gray-500 uppercase tracking-widest">
-            INDIAN HOMEY © {new Date().getFullYear()}
+            puchhuu © {new Date().getFullYear()}
           </p>
         </div>
       </div>

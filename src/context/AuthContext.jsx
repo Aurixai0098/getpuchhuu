@@ -167,8 +167,8 @@ export const AuthProvider = ({ children }) => {
             <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <img
-                src="https://res.cloudinary.com/dfqsa6hoc/image/upload/v1779533276/PhotoshopExtension_Image__1_-removebg-preview_fzvzvy.png"
-                alt="INDIAN HOMEY"
+                src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792321290/92b7c9c1-cf96-4949-90e4-87ab165623cc.png"
+                alt="puchhuu"
                 className="w-20 h-20 object-contain"
               />
             </div>

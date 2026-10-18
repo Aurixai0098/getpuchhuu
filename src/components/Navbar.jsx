@@ -358,7 +358,7 @@ const Navbar = () => {
 >
   <img
     src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png"
-    alt="INDIAN HOMEY"
+    alt="puchhuu logo "
     className={`h-16 xl:h-20 w-auto object-contain transition-transform duration-500 ${isLogoRotating ? 'scale-110' : 'scale-100'}`}
   />
 </Link>
@@ -528,7 +528,7 @@ const Navbar = () => {
              <Link to="/" className="flex shrink-0 items-center no-underline" onClick={handleLogoRotate}>
   <img
     src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792054212/5b371f1e-88c7-4d4f-aa47-9d3cf264ee2d.png"
-    alt="INDIAN HOMEY"
+    alt="puchhuu logo"
     className="h-12 sm:h-14 w-auto object-contain"
   />
 </Link>

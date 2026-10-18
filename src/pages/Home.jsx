@@ -151,7 +151,7 @@ export default function Home() {
   };
 
   const desktopBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792055959/378c9470-484d-4d3e-b4d1-9054b714fd20.png";
-  const mobileBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792056840/2d4d7f45-ad4b-4d54-8909-ff4a8e037115.png";
+  const mobileBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png";
 
   if (loading) {
     return (
@@ -162,12 +162,12 @@ export default function Home() {
             <div className="absolute inset-0 flex items-center justify-center">
               <img
                 src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792055094/452dcd67-1b04-471b-b09c-ce971e99855d.png"
-                alt="INDIAN HOMEY"
+                alt="puchhuu banner"
                 className="w-20 h-20 object-contain"
               />
             </div>
           </div>
-          <p className="text-gray-800 font-semibold text-xl mt-2 uppercase">Welcome to INDIAN HOMEY</p>
+          <p className="text-gray-800 font-semibold text-xl mt-2 uppercase">Welcome to puchhuu</p>
         </div>
       </div>
     );

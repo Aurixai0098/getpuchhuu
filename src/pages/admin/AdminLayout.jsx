@@ -206,16 +206,16 @@ const AdminLayout = () => {
             <div className="flex items-center gap-3">
               {/* Company Logo Image */}
               <img
-                src="https://res.cloudinary.com/djtvxmttf/image/upload/v1778781548/a7ea1860-5474-4e8d-800b-72c68b9f6b71-removebg-preview_cpmi08.png"
-                alt="Company Logo"
+                src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png"
+                alt=" puchhuu Company Logo"
                 className="w-10 h-10 rounded-xl object-cover"
               />
               {sidebarOpen && (
                 <div className="flex">
                   {/* Company Name Image */}
                   <img
-                    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1778657661/ChatGPT_Image_May_13__2026__12_33_54_AM-removebg-preview_w7uxh5.png"
-                    alt="GharSeva"
+                    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png"
+                    alt="puchhuu"
                     className="h-20 w-auto object-contain"
                   />
                 </div>

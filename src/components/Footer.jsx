@@ -79,7 +79,7 @@ const Footer = () => {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest mb-6">Press</h4>
             <ul className="space-y-4 text-sm text-gray-300">
-              <li><a href="mailto:press@indianhomey.com" className="text-[#22c55e] hover:underline">press@puchhuu.com</a></li>
+              <li><a href="mailto:puchhuu01@gmail.com" className="text-[#22c55e] hover:underline">press@puchhuu.com</a></li>
               <li><a href="#" className="hover:text-white">Press Kit</a></li>
             </ul>
           </div>

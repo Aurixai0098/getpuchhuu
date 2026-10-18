@@ -18,7 +18,7 @@ const LoadingScreen = () => {
         </div>
       </div>
       {/* Welcome text */}
-      <p className="text-gray-800 font-semibold text-xl mt-2">Welcome to puchhuu</p>
+      <p className="text-gray-800 font-semibold text-xl mt-2">Welcome to puchhuu :- The Art Of Clean</p>
     </div>
   );
 };

@@ -151,7 +151,7 @@ export default function Home() {
   };
 
   const desktopBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792055959/378c9470-484d-4d3e-b4d1-9054b714fd20.png";
-  const mobileBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png";
+  const mobileBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792056840/2d4d7f45-ad4b-4d54-8909-ff4a8e037115.png";
 
   if (loading) {
     return (

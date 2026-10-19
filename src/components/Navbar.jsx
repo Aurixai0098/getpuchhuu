@@ -527,7 +527,7 @@ const Navbar = () => {
                 {/* Logo */}
              <Link to="/" className="flex shrink-0 items-center no-underline" onClick={handleLogoRotate}>
   <img
-    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792054212/5b371f1e-88c7-4d4f-aa47-9d3cf264ee2d.png"
+    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png"
     alt="puchhuu logo"
     className="h-12 sm:h-14 w-auto object-contain"
   />

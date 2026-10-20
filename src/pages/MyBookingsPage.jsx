@@ -214,15 +214,19 @@ const MyBookingsPage = () => {
     try {
       const orderRes = await createOrder({ bookingId: booking._id });
       if (!orderRes.success) throw new Error(orderRes.message || 'Failed to create order');
-      if (!window.Razorpay) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = resolve;
-          script.onerror = () => { throw new Error('Failed to load Razorpay'); };
-          document.body.appendChild(script);
-        });
-      }
+if (!window.Razorpay) {
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Failed to load Razorpay checkout script.'));
+    document.body.appendChild(script);
+  });
+}
+
+if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+  throw new Error('Razorpay Key ID missing. Check Vercel environment variables.');
+}
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: orderRes.data.amount,
@@ -251,7 +255,16 @@ const MyBookingsPage = () => {
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', (response) => { setError('Payment failed: ' + (response.error?.description || 'Unknown error')); setPayingBookingId(null); });
       rzp.open();
-    } catch (err) { setError(err.message || 'Failed to initiate payment.'); setPayingBookingId(null); }
+    } catch (err) {
+  console.error('PAYMENT INITIATION ERROR:', err);
+  setError(err.response?.data?.message || err.message || 'Failed to initiate payment.');
+  setPayingBookingId(null);
+  alert(
+    err.response?.data?.message ||
+    err.message ||
+    'Payment start nahi ho paya. Browser Console check karo.'
+  );
+}
   };
 
   const openReviewModal = (booking) => { setBookingForReview(booking); setShowReviewModal(true); };

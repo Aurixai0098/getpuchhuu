@@ -302,9 +302,6 @@ const handleConfirmOffer = async (bookingId) => {
 
     setBookings(bookingsRes.data.bookings || []);
     setSelectedBooking(latestBooking);
-
-    // Open payment checkout after customer accepts the offer
-    // await handlePayNow(latestBooking);
     setSuccessMessage('Offer accepted! Please click Pay Now to complete payment.');
   } catch (err) {
     setError(null);

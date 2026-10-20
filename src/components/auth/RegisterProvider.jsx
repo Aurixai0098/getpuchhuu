@@ -15,6 +15,69 @@ import {
   FileText, Banknote
 } from 'lucide-react';
 
+
+const compressImageForUpload = async (file) => {
+  const maxBytes = 750 * 1024; // 750 KB per image
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = new Image();
+
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('Image could not be loaded'));
+      image.src = objectUrl;
+    });
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) throw new Error('Image compression is not supported');
+
+    const initialScale = Math.min(
+      1,
+      1800 / image.width,
+      1800 / image.height
+    );
+
+    const qualities = [0.85, 0.78, 0.70, 0.62, 0.55, 0.48];
+
+    for (let attempt = 0; attempt < qualities.length; attempt++) {
+      const scale = initialScale * Math.pow(0.85, attempt);
+
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (result) => {
+            if (result) resolve(result);
+            else reject(new Error('Image compression failed'));
+          },
+          'image/jpeg',
+          qualities[attempt]
+        );
+      });
+
+      if (blob.size <= maxBytes || attempt === qualities.length - 1) {
+        return new File(
+          [blob],
+          `${file.name.replace(/\.[^.]+$/, '')}.jpg`,
+          { type: 'image/jpeg', lastModified: Date.now() }
+        );
+      }
+    }
+
+    throw new Error('Image compression failed');
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+
 const RegisterProvider = () => {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
@@ -400,9 +463,35 @@ const RegisterProvider = () => {
       formData.append('serviceArea', JSON.stringify(serviceArea));
       formData.append('currentAddress', providerData.currentAddress);
 
-      if (providerData.aadharFront) formData.append('aadharFront', providerData.aadharFront);
-      if (providerData.aadharBack) formData.append('aadharBack', providerData.aadharBack);
-      if (providerData.panFront) formData.append('panFront', providerData.panFront);
+     
+if (providerData.avatar) {
+  formData.append(
+    'avatar',
+    await compressImageForUpload(providerData.avatar)
+  );
+}
+
+if (providerData.aadharFront) {
+  formData.append(
+    'aadharFront',
+    await compressImageForUpload(providerData.aadharFront)
+  );
+}
+
+if (providerData.aadharBack) {
+  formData.append(
+    'aadharBack',
+    await compressImageForUpload(providerData.aadharBack)
+  );
+}
+
+if (providerData.panFront) {
+  formData.append(
+    'panFront',
+    await compressImageForUpload(providerData.panFront)
+  );
+}
+
 
       formData.append('bankDetails', JSON.stringify({
         accountHolderName: providerData.accountHolderName,

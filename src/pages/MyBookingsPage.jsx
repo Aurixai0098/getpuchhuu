@@ -271,13 +271,45 @@ const MyBookingsPage = () => {
     } catch (err) { alert(err.message || 'Failed to cancel booking'); }
   };
 
-  const handleConfirmOffer = async (bookingId) => {
-    try {
-      await confirmOffer(bookingId);
-      await loadBookings(true);
-      alert('Booking confirmed! You can now track the service.');
-    } catch (err) { alert(err.message); }
-  };
+  // const handleConfirmOffer = async (bookingId) => {
+
+  //   try {
+  //     await confirmOffer(bookingId);
+  //     await loadBookings(true);
+  //     alert('Booking confirmed! You can now track the service.');
+  //   } catch (err) { alert(err.message); }
+  // };
+
+const handleConfirmOffer = async (bookingId) => {
+  try {
+    setError(null);
+
+    const confirmRes = await confirmOffer(bookingId);
+
+    if (confirmRes && confirmRes.success === false) {
+      throw new Error(confirmRes.message || 'Failed to confirm offer');
+    }
+
+    // Reload bookings and get the latest confirmed booking
+    const bookingsRes = await fetchMyBookings(1, 50);
+    const latestBooking = bookingsRes.data?.bookings?.find(
+      (booking) => booking._id === bookingId
+    );
+
+    if (!latestBooking) {
+      throw new Error('Booking confirmed, but booking details could not be refreshed.');
+    }
+
+    setBookings(bookingsRes.data.bookings || []);
+    setSelectedBooking(latestBooking);
+
+    // Open payment checkout after customer accepts the offer
+    await handlePayNow(latestBooking);
+  } catch (err) {
+    setError(err.message || 'Failed to confirm offer');
+  }
+};
+
 
   const handleRejectOffer = async (bookingId) => {
     if (confirm('Are you sure you want to reject the provider’s offer? The booking will be cancelled.')) {

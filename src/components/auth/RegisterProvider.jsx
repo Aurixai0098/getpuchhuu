@@ -435,7 +435,7 @@ const RegisterProvider = () => {
 
     try {
       const formData = new FormData();
-      if (providerData.avatar) formData.append('avatar', providerData.avatar);
+      // if (providerData.avatar) formData.append('avatar', providerData.avatar);
       formData.append('fullName', providerData.fullName);
       formData.append('dateOfBirth', providerData.dateOfBirth);
       formData.append('gender', providerData.gender);

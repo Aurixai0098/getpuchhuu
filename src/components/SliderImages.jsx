@@ -1,4 +1,4 @@
- 
+import { memo } from 'react';
 import { Star, Quote } from 'lucide-react';
 
 // ─── 30 DEMO REVIEWS ────────────────────────────────────────────────
@@ -11,10 +11,10 @@ const DEMO_REVIEWS = [
   { id: 6, name: "S Gupta", rating: 5, comment: "Fast, reliable, and affordable. The pest control team was thorough and professional.", date: "4 days ago" },
   { id: 7, name: "M Ali", rating: 4, comment: "Very satisfied with the painting service. The team was punctual and the finish is excellent.", date: "6 days ago" },
   { id: 8, name: "D Singh", rating: 5, comment: "The RO repair service was top-notch. Technician explained everything clearly. Will use again!", date: "2 weeks ago" },
-  { id: 9, name: "N Patel", rating: 5, comment: "INDIAN HOMEY never disappoints! The sofa cleaning service made my 5-year-old sofa look brand new.", date: "3 days ago" },
+  { id: 9, name: "N Patel", rating: 5, comment: "Puchhuu never disappoints! The sofa cleaning service made my 5-year-old sofa look brand new.", date: "3 days ago" },
   { id: 10, name: "A Kumar", rating: 4, comment: "Good service at reasonable prices. The microwave repair was done within an hour.", date: "1 week ago" },
   { id: 11, name: "S Reddy", rating: 5, comment: "The bathroom cleaning team was incredibly thorough. Every corner sparkles now!", date: "4 days ago" },
-  { id: 12, name: "P Mishra", rating: 5, comment: "Best decision to use INDIAN HOMEY for my kitchen chimney repair. Works like new now!", date: "5 days ago" },
+  { id: 12, name: "P Mishra", rating: 5, comment: "Best decision to use Puchhuu for my kitchen chimney repair. Works like new now!", date: "5 days ago" },
   { id: 13, name: "V Joshi", rating: 4, comment: "The inverter repair service was quick and efficient. Fair pricing too.", date: "1 week ago" },
   { id: 14, name: "T Nair", rating: 5, comment: "Exceptional service! The team installed my new washing machine perfectly and even gave usage tips.", date: "2 days ago" },
   { id: 15, name: "R Iyer", rating: 5, comment: "The water tank cleaning service was excellent. They used proper equipment and cleaned up after.", date: "6 days ago" },
@@ -36,7 +36,7 @@ const DEMO_REVIEWS = [
 ];
 
 // ─── Review Card ───────────────────────────────────────────────────
-const ReviewCard = ({ review }) => (
+const ReviewCard = memo(({ review }) => (
   <div className="w-[280px] sm:w-[360px] md:w-[400px] bg-white p-5 md:p-7 rounded-2xl shadow-md border border-slate-100 flex flex-col justify-between flex-shrink-0 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all duration-300 cursor-default group">
     <div>
       {/* Stars */}
@@ -62,6 +62,7 @@ const ReviewCard = ({ review }) => (
         <img 
           src={review.image} 
           alt={review.name} 
+          loading="lazy" decoding="async" 
           className="w-11 h-11 md:w-12 md:h-12 rounded-full object-cover border-2 border-white shadow-md" 
         />
       ) : (
@@ -78,30 +79,29 @@ const ReviewCard = ({ review }) => (
       </div>
     </div>
   </div>
-);
+));
+ReviewCard.displayName = 'ReviewCard';
 
 // ─── Main Component ────────────────────────────────────────────────
 const InfiniteReviewsMarquee = ({ reviews }) => {
   // Use provided reviews or fallback to demo reviews
   const displayReviews = reviews?.length > 0 ? reviews : DEMO_REVIEWS;
   
-  // Triple for seamless loop
-  const tripleReviews = [...displayReviews, ...displayReviews, ...displayReviews];
-  const reversedReviews = [...displayReviews].reverse();
-  const tripleReversed = [...reversedReviews, ...reversedReviews, ...reversedReviews];
-  const offsetReviews = [...displayReviews.slice(10), ...displayReviews.slice(0, 10)];
-  const tripleOffset = [...offsetReviews, ...offsetReviews, ...offsetReviews];
+  // Two copies + translateX(-50%) loops seamlessly with a third less DOM.
+  const loopA = [...displayReviews, ...displayReviews];
+  const reversed = [...displayReviews].reverse();
+  const loopB = [...reversed, ...reversed];
 
   return (
     <section className="py-14 md:py-20 px-5 sm:px-6 bg-slate-50 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10 md:mb-14">
-          <h2 className="text-2xl sm:text-3xl md:text-6xl     text-slate-900 mb-3">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl text-slate-900 mb-3">
             Our Customer Reviews
           </h2>
           <p className="text-slate-500 italic  underline md:text-2xl text-sm  max-w-xl   mx-auto">
-            What our happy clients say about Ghar Seva
+            What our happy clients say about Puchhuu
           </p>
           <div className="flex items-center justify-center gap-2 mt-4">
             <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
@@ -112,21 +112,17 @@ const InfiniteReviewsMarquee = ({ reviews }) => {
 
         {/* Marquee Container */}
         <div className="relative space-y-5">
-          {/* Left Fade */}
-          <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32  z-10 pointer-events-none"></div>
-          {/* Right Fade */}
-          <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32  z-10 pointer-events-none"></div>
 
           {/* Track 1 - Scrolls Left */}
-          <div className="flex gap-5 animate-marquee-left hover:[animation-play-state:paused]">
-            {tripleReviews.map((review, idx) => (
+          <div className="flex gap-5 animate-marquee-left hover:[animation-play-state:paused] motion-reduce:animate-none">
+            {loopA.map((review, idx) => (
               <ReviewCard key={`row1-${review.id}-${idx}`} review={review} />
             ))}
           </div>
 
           {/* Track 2 - Scrolls Right */}
-          <div className="flex gap-5 animate-marquee-right hover:[animation-play-state:paused]">
-            {tripleReversed.map((review, idx) => (
+          <div className="flex gap-5 animate-marquee-right hover:[animation-play-state:paused] motion-reduce:animate-none">
+            {loopB.map((review, idx) => (
               <ReviewCard key={`row2-${review.id}-${idx}`} review={review} />
             ))}
           </div>
@@ -139,15 +135,15 @@ const InfiniteReviewsMarquee = ({ reviews }) => {
       <style>{`
         @keyframes marquee-left {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-33.333%); }
+          100% { transform: translateX(-50%); }
         }
         @keyframes marquee-right {
-          0% { transform: translateX(-33.333%); }
+          0% { transform: translateX(-50%); }
           100% { transform: translateX(0); }
         }
         @keyframes marquee-left-slow {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-33.333%); }
+          100% { transform: translateX(-50%); }
         }
         .animate-marquee-left {
           animation: marquee-left 100s linear infinite;
@@ -167,4 +163,3 @@ const InfiniteReviewsMarquee = ({ reviews }) => {
 };
 
 export default InfiniteReviewsMarquee;
- 

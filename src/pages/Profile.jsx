@@ -1,5 +1,6 @@
 // src/pages/Profile.jsx
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   updateUserProfile, 
@@ -17,6 +18,7 @@ import {
   Mail, 
   Phone, 
   Calendar, 
+  CalendarDays,
   CheckCircle, 
   XCircle, 
   Save, 
@@ -26,7 +28,6 @@ import {
   LogOut,
   Settings,
   Star,
-  Clock,
   Heart,
   ChevronRight,
   Eye,
@@ -37,11 +38,110 @@ import {
   Edit2,
   Briefcase,
   MapPin,
-  Clock as ClockIcon
+  CreditCard,
+  Lock,
+  Gift,
+  HelpCircle,
+  Crown,
+  BadgeCheck,
+  ArrowRight,
+  Tag,
+  Zap,
+  Percent,
 } from 'lucide-react';
+
+/* ------------------------------------------------------------------
+   UI-ONLY SETTINGS (backend se koi lena-dena nahi)
+------------------------------------------------------------------ */
+
+// Sidebar / banner ke links. Apne project ke asli routes ke hisaab se badal lena.
+const ROUTES = {
+  bookings: '/bookings',
+  favourites: '/favourites',
+  refer: '/refer',
+  help: '/help',
+  offers: '/offers',
+};
+
+// Delete Account par support ka mail khulta hai (koi delete API nahi hai)
+const SUPPORT_EMAIL = 'help@puchhuu.com';
+
+const INPUT =
+  'w-full h-11 px-4 border border-gray-200 bg-white rounded-xl text-sm text-gray-800 outline-none transition focus:ring-2 focus:ring-[#0E7C86]/25 focus:border-[#0E7C86]';
+const CARD = 'bg-white rounded-2xl border border-[#E8EDF1] shadow-sm';
+const PRIMARY_BTN =
+  'inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl bg-gradient-to-r from-[#0E7C86] to-[#12948F] hover:from-[#0B6A73] hover:to-[#0E7C86] text-white text-sm font-semibold transition-all disabled:opacity-50 shadow-sm';
+
+/* ------------------------------------------------------------------
+   Small UI pieces (component ke bahar, taaki typing me focus na jaye)
+------------------------------------------------------------------ */
+
+const InfoRow = ({ Icon, label, children }) => (
+  <div className="flex items-center gap-4 py-3.5 border-b border-gray-100 last:border-0">
+    <Icon size={18} className="text-gray-500 shrink-0" aria-hidden="true" />
+    <span className="w-32 sm:w-40 shrink-0 text-sm text-[#5B6B7F]">{label}</span>
+    <span className="flex-1 min-w-0 text-sm font-semibold text-[#0B1B33] break-words">{children}</span>
+  </div>
+);
+
+const SettingRow = ({ Icon, title, sub, onClick, href, danger = false }) => {
+  const inner = (
+    <>
+      <span className={`w-10 h-10 shrink-0 rounded-xl grid place-items-center ${danger ? 'bg-red-50 text-red-500' : 'bg-[#F1F5F7] text-[#1E2E45]'}`}>
+        <Icon size={18} aria-hidden="true" />
+      </span>
+      <span className="flex-1 min-w-0 text-left">
+        <span className={`block text-sm font-semibold leading-tight ${danger ? 'text-red-600' : 'text-[#0B1B33]'}`}>{title}</span>
+        <span className="block text-xs text-[#5B6B7F] leading-tight mt-0.5">{sub}</span>
+      </span>
+      <ChevronRight size={18} className="text-gray-400 shrink-0" aria-hidden="true" />
+    </>
+  );
+  const cls = 'w-full flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50/70 transition-colors rounded-lg px-1';
+  return href ? (
+    <a href={href} className={cls}>{inner}</a>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>{inner}</button>
+  );
+};
+
+const Toggle = ({ on, onClick, disabled, label }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    aria-label={label}
+    onClick={onClick}
+    disabled={disabled}
+    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-[#0E7C86]' : 'bg-gray-300'}`}
+  >
+    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+  </button>
+);
+
+const PasswordField = ({ label, value, onChange, placeholder, show, toggle }) => (
+  <div>
+    <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">{label}</label>
+    <div className="relative">
+      <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        required
+        placeholder={placeholder}
+        className={`${INPUT} pl-10 pr-10`}
+      />
+      <button type="button" onClick={toggle} aria-label={show ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+        {show ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
+  </div>
+);
 
 const Profile = () => {
   const { user, setUser, logout } = useAuth();
+  const navigate = useNavigate();
   
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -318,562 +418,590 @@ const Profile = () => {
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString('en-US', { 
+    return new Date(dateString).toLocaleDateString('en-GB', { 
       year: 'numeric', 
-      month: 'long', 
+      month: 'short', 
       day: 'numeric' 
     });
   };
 
+  /* ---------------- UI-only helpers ---------------- */
+  const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Your Name';
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+    : null;
+  const phoneVerified = !!(user?.isPhoneVerified ?? user?.phoneVerified);
+
+  const openEdit = () => { setActiveTab('profile'); setIsEditing(true); };
+
+  const SIDEBAR = [
+    { label: 'My Profile', Icon: User, tab: 'profile' },
+    { label: 'My Bookings', Icon: CalendarDays, to: ROUTES.bookings },
+    { label: 'My Addresses', Icon: MapPin, tab: 'addresses' },
+    { label: 'Payment Methods', Icon: CreditCard, tab: 'payments' },
+    { label: 'Saved & Favourites', Icon: Heart, to: ROUTES.favourites },
+    { label: 'Notifications', Icon: Bell, tab: 'notifications' },
+    { label: 'Refer & Earn', Icon: Gift, to: ROUTES.refer },
+    { label: 'Help & Support', Icon: HelpCircle, to: ROUTES.help },
+    { label: 'Settings', Icon: Settings, tab: 'security' },
+  ];
+
+  const TABS = [
+    ['profile', 'Personal Information'],
+    ['addresses', 'Addresses'],
+    ['payments', 'Payment Methods'],
+    ['notifications', 'Notifications'],
+    ['security', 'Security'],
+  ];
+
+  const notifItems = [
+    { key: 'email', Icon: MailCheck, color: 'text-[#0E7C86]', title: 'Email Notifications', sub: 'Receive updates about bookings and offers via email' },
+    { key: 'sms', Icon: Smartphone, color: 'text-purple-600', title: 'SMS Notifications', sub: 'Get SMS alerts for booking status changes' },
+    { key: 'push', Icon: Globe, color: 'text-orange-600', title: 'Push Notifications', sub: 'Receive in-app notifications and reminders' },
+  ];
+
+  const placeholderPanel = (Icon, title, text) => (
+    <div className={`${CARD} p-10 text-center`}>
+      <span className="mx-auto w-14 h-14 rounded-2xl bg-[#E3F5F1] text-[#0E7C86] grid place-items-center">
+        <Icon size={26} aria-hidden="true" />
+      </span>
+      <h2 className="mt-4 text-lg font-bold text-[#0B1B33]">{title}</h2>
+      <p className="mt-1 text-sm text-[#5B6B7F]">{text}</p>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-          <p className="text-gray-500 mt-1">Manage your profile, security, and preferences</p>
+    <div className="min-h-screen bg-[#F4F8FA] py-5 sm:py-6 px-3 sm:px-6 lg:px-8">
+      {/* Toast Message */}
+      {message && (
+        <div className={`fixed top-20 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg transition-all duration-300 animate-in slide-in-from-right ${
+          messageType === 'error' ? 'bg-red-500 text-white' : 'bg-[#0E7C86] text-white'
+        }`} role="status">
+          {messageType === 'error' ? <XCircle size={18} /> : <CheckCircle size={18} />}
+          <span className="text-sm font-medium">{message}</span>
+          <button onClick={() => setMessage('')} aria-label="Dismiss" className="ml-2 hover:opacity-80">
+            <X size={14} />
+          </button>
         </div>
+      )}
 
-        {/* Toast Message */}
-        {message && (
-          <div className={`fixed top-20 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 animate-in slide-in-from-right ${
-            messageType === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-          }`}>
-            {messageType === 'error' ? <XCircle size={18} /> : <CheckCircle size={18} />}
-            <span className="text-sm font-medium">{message}</span>
-            <button onClick={() => setMessage('')} className="ml-2 hover:opacity-80">
-              <X size={14} />
-            </button>
-          </div>
-        )}
+      {/* hidden file input (hero camera + Change Photo dono yahi use karte hain) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleAvatarSelect}
+        className="hidden"
+      />
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar */}
-          <div className="lg:w-80 flex-shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
-              {/* Avatar Section */}
-              <div className="p-6 text-center border-b border-gray-100">
-                <div className="relative inline-block">
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden shadow-lg mx-auto">
-                    {avatarPreview ? (
-                      <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={56} className="text-white" />
-                    )}
-                  </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors disabled:opacity-50 border border-gray-200"
-                    title="Change profile picture"
-                  >
-                    <Camera size={16} className="text-gray-600" />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarSelect}
-                    className="hidden"
-                  />
-                </div>
-                <h2 className="mt-4 text-xl font-bold text-gray-800">{user?.firstName} {user?.lastName}</h2>
-                <p className="text-sm text-gray-500 mt-1 flex items-center justify-center gap-1">
-                  <Mail size={12} /> {user?.email}
-                </p>
-                <div className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <CheckCircle size={12} className="mr-1" />
-                  {user?.role === 'provider' ? 'Professional Account' : 'Verified Account'}
-                </div>
+      <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6">
 
-                {/* Avatar upload controls - only in edit mode */}
-                {isEditing && avatarFile && (
-                  <div className="mt-4 flex justify-center gap-2">
+        {/* ================= SIDEBAR ================= */}
+        <aside className="lg:w-60 shrink-0">
+          <nav aria-label="Account" className={`${CARD} p-2 lg:p-3 lg:sticky lg:top-24`}>
+            <ul className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0 profile-noscroll">
+              {SIDEBAR.map(({ label, Icon, tab, to }) => {
+                const active = tab && activeTab === tab;
+                return (
+                  <li key={label} className="shrink-0 lg:shrink">
                     <button
-                      onClick={handleUploadAvatar}
-                      disabled={uploading}
-                      className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition flex items-center gap-1"
+                      type="button"
+                      onClick={() => (tab ? setActiveTab(tab) : navigate(to))}
+                      aria-current={active ? 'page' : undefined}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm whitespace-nowrap transition-colors ${
+                        active
+                          ? 'bg-gradient-to-r from-[#0E7C86] to-[#12948F] text-white font-semibold shadow-sm'
+                          : 'text-[#2B3A50] hover:bg-gray-50'
+                      }`}
                     >
-                      {uploading ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                      Save
+                      <Icon size={18} aria-hidden="true" />
+                      {label}
                     </button>
-                    <button
-                      onClick={cancelEditing}
-                      className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300 transition flex items-center gap-1"
-                    >
-                      <X size={12} />
-                      Cancel
-                    </button>
-                  </div>
-                )}
-                {isEditing && !avatarFile && avatarPreview && (
-                  <button
-                    onClick={handleRemoveAvatar}
-                    disabled={uploading}
-                    className="mt-3 text-xs text-red-600 hover:text-red-700 font-medium flex items-center justify-center gap-1"
-                  >
-                    <Trash2 size={12} />
-                    Remove photo
-                  </button>
-                )}
-              </div>
-
-              {/* Quick Stats Card */}
-              <div className="p-4 border-b border-gray-100 bg-gray-50">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Stats</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Total Bookings</span>
-                    <span className="font-semibold text-gray-800">{stats.totalBookings || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Completed</span>
-                    <span className="font-semibold text-green-600">{stats.completedBookings || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Total Spent</span>
-                    <span className="font-semibold text-emerald-600">₹{stats.totalSpent || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Tabs (Sidebar) */}
-              <div className="p-4 space-y-1">
+                  </li>
+                );
+              })}
+              <li className="shrink-0 lg:shrink lg:mt-3">
                 <button
-                  onClick={() => setActiveTab('profile')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeTab === 'profile'
-                      ? 'bg-blue-50 text-blue-700 font-medium shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <User size={18} />
-                  <span>Personal Info</span>
-                  {activeTab === 'profile' && <ChevronRight size={16} className="ml-auto" />}
-                </button>
-                <button
-                  onClick={() => setActiveTab('security')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeTab === 'security'
-                      ? 'bg-blue-50 text-blue-700 font-medium shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <Shield size={18} />
-                  <span>Security</span>
-                  {activeTab === 'security' && <ChevronRight size={16} className="ml-auto" />}
-                </button>
-                <button
-                  onClick={() => setActiveTab('notifications')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeTab === 'notifications'
-                      ? 'bg-blue-50 text-blue-700 font-medium shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <Bell size={18} />
-                  <span>Notifications</span>
-                  {activeTab === 'notifications' && <ChevronRight size={16} className="ml-auto" />}
-                </button>
-                <button
+                  type="button"
                   onClick={logout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all mt-4"
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
                 >
-                  <LogOut size={18} />
-                  <span>Sign Out</span>
+                  <LogOut size={18} aria-hidden="true" />
+                  Logout
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </aside>
+
+        {/* ================= MAIN ================= */}
+        <div className="flex-1 min-w-0 space-y-5">
+
+          {/* Hero card */}
+          <section className="rounded-2xl bg-gradient-to-br from-[#0A2833] via-[#0C3C48] to-[#0E6670] text-white p-5 sm:p-7 flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
+            <div className="flex items-center gap-5 flex-1 min-w-0">
+              <div className="relative shrink-0">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white/90 bg-gradient-to-br from-[#0E7C86] to-[#0B2545] grid place-items-center overflow-hidden shadow-lg">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={48} className="text-white" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  title="Change profile picture"
+                  aria-label="Change profile picture"
+                >
+                  <Camera size={15} className="text-[#0B1B33]" />
+                </button>
+              </div>
+
+              <div className="min-w-0">
+                <h1 className="flex items-center gap-2 text-xl sm:text-2xl font-bold">
+                  <span className="truncate">{fullName}</span>
+                  <BadgeCheck size={20} className="text-[#35D6E0] shrink-0" aria-label="Verified account" />
+                </h1>
+                <p className="mt-1 text-sm text-white/85 truncate">{user?.email}</p>
+                <p className="text-sm text-white/85">{user?.phone ? `+91 ${user.phone}` : ''}</p>
+                <button
+                  type="button"
+                  onClick={openEdit}
+                  className="mt-3 inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-white text-[#0B1B33] text-sm font-semibold hover:bg-[#E8F7F8] transition-colors"
+                >
+                  <Edit2 size={14} /> Edit Profile
                 </button>
               </div>
             </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 md:flex md:items-stretch gap-3 md:gap-0 text-center md:divide-x md:divide-white/20">
+              <div className="md:px-7 flex flex-col items-center justify-center">
+                <CalendarDays size={20} className="text-[#35D6E0] mb-1" aria-hidden="true" />
+                <p className="text-xl sm:text-2xl font-bold leading-tight">{stats.totalBookings || 0}</p>
+                <p className="text-[11px] sm:text-xs text-white/75">Total Bookings</p>
+              </div>
+              <div className="md:px-7 flex flex-col items-center justify-center">
+                <Star size={20} className="text-amber-400 fill-amber-400 mb-1" aria-hidden="true" />
+                <p className="text-xl sm:text-2xl font-bold leading-tight">—</p>
+                <p className="text-[11px] sm:text-xs text-white/75">Average Rating</p>
+              </div>
+              <div className="md:px-7 flex flex-col items-center justify-center">
+                <Crown size={20} className="text-[#35D6E0] mb-1" aria-hidden="true" />
+                <p className="text-sm sm:text-base font-bold leading-tight">
+                  {user?.role === 'provider' ? 'Puchhuu Partner' : 'Puchhuu Member'}
+                </p>
+                <p className="text-[11px] sm:text-xs text-white/75">{memberSince ? `Since ${memberSince}` : 'Welcome'}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Tabs */}
+          <div className="flex gap-6 overflow-x-auto profile-noscroll border-b border-[#E3E8EC]" role="tablist" aria-label="Profile sections">
+            {TABS.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === key}
+                onClick={() => setActiveTab(key)}
+                className={`shrink-0 pb-3 -mb-px text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                  activeTab === key
+                    ? 'text-[#0E7C86] border-[#0E7C86]'
+                    : 'text-[#5B6B7F] border-transparent hover:text-[#0B1B33]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Tab: Profile Info */}
-            {activeTab === 'profile' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 md:p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <User size={24} className="text-blue-600" />
-                      <h2 className="text-xl font-bold text-gray-800">Personal Information</h2>
-                    </div>
-                    {!isEditing && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition"
-                      >
-                        <Edit2 size={16} />
-                        Edit Profile
-                      </button>
-                    )}
-                  </div>
-
-                  {!isEditing ? (
-                    // Display mode
-                    <div className="space-y-5">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">First Name</label>
-                          <p className="text-gray-800 font-medium">{form.firstName || '—'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">Last Name</label>
-                          <p className="text-gray-800 font-medium">{form.lastName || '—'}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                          <p className="text-gray-800 font-medium">{user?.email || '—'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">Phone</label>
-                          <p className="text-gray-800 font-medium">{user?.phone || '—'}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">Gender</label>
-                          <p className="text-gray-800 font-medium capitalize">{form.gender || '—'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">Date of Birth</label>
-                          <p className="text-gray-800 font-medium">{formatDate(form.dateOfBirth)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // Edit mode - form
-                    <form onSubmit={handleSaveProfile} className="space-y-5">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                          <input
-                            type="text"
-                            name="firstName"
-                            value={form.firstName}
-                            onChange={handleChange}
-                            required
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                          <input
-                            type="text"
-                            name="lastName"
-                            value={form.lastName}
-                            onChange={handleChange}
-                            required
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl">
-                            <Mail size={18} className="text-gray-400" />
-                            <span className="text-gray-600">{user?.email}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl">
-                            <Phone size={18} className="text-gray-400" />
-                            <span className="text-gray-600">{user?.phone}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                          <select
-                            name="gender"
-                            value={form.gender}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
-                          >
-                            <option value="">Select gender</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                          <div className="relative">
-                            <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                              type="date"
-                              name="dateOfBirth"
-                              value={form.dateOfBirth}
-                              onChange={handleChange}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+          {/* ============ TAB: Personal Information ============ */}
+          {activeTab === 'profile' && (
+            <>
+              <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-5">
+                {/* Left column */}
+                <div className="space-y-5 min-w-0">
+                  <section className={`${CARD} p-5 sm:p-6`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-lg font-bold text-[#0B1B33]">Personal Information</h2>
+                      {!isEditing && (
                         <button
                           type="button"
-                          onClick={cancelEditing}
-                          className="px-6 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition"
+                          onClick={() => setIsEditing(true)}
+                          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-gray-200 text-sm font-medium text-[#1E2E45] hover:bg-gray-50 transition"
                         >
-                          Cancel
+                          <Edit2 size={14} /> Edit
                         </button>
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="px-8 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
-                        >
-                          {loading && <Loader2 size={18} className="animate-spin" />}
-                          {loading ? 'Saving...' : 'Save Changes'}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-
-                {/* Provider Information Section (only for provider users) */}
-                {user?.role === 'provider' && (
-                  <div className="border-t border-gray-100 p-6 md:p-8 bg-gray-50">
-                    <div className="flex items-center gap-3 mb-6">
-                      <Briefcase size={24} className="text-emerald-600" />
-                      <h2 className="text-xl font-bold text-gray-800">Professional Information</h2>
+                      )}
                     </div>
-                    {providerLoading ? (
-                      <div className="flex justify-center py-8">
-                        <Loader2 size={32} className="animate-spin text-emerald-600" />
-                      </div>
-                    ) : providerInfo ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">Business Name</label>
-                            <p className="text-gray-800 font-medium">{providerInfo.businessName || '—'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">Years of Experience</label>
-                            <p className="text-gray-800 font-medium">{providerInfo.experience?.years || 0} years</p>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 mb-1">Bio</label>
-                          <p className="text-gray-700">{providerInfo.bio || '—'}</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">Verification Status</label>
-                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                              providerInfo.verificationStatus === 'verified' 
-                                ? 'bg-green-100 text-green-800'
-                                : providerInfo.verificationStatus === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {providerInfo.verificationStatus === 'verified' ? '✓ Verified' : 
-                               providerInfo.verificationStatus === 'pending' ? '⏳ Pending' : '✗ Rejected'}
-                            </span>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">Service Radius</label>
-                            <p className="text-gray-800 font-medium flex items-center gap-1">
-                              <MapPin size={14} /> {providerInfo.serviceArea?.radius || 10} km
-                            </p>
-                          </div>
-                        </div>
-                        <div className="pt-3">
-                          <button
-                            onClick={() => window.location.href = '/provider/profile'}
-                            className="text-emerald-600 hover:text-emerald-700 text-sm font-medium flex items-center gap-1"
-                          >
-                            Manage Professional Profile →
-                          </button>
-                        </div>
+
+                    {!isEditing ? (
+                      // Display mode
+                      <div>
+                        <InfoRow Icon={User} label="Full Name">{fullName}</InfoRow>
+                        <InfoRow Icon={Mail} label="Email Address">{user?.email || '—'}</InfoRow>
+                        <InfoRow Icon={Smartphone} label="Mobile Number">
+                          <span className="inline-flex flex-wrap items-center gap-2">
+                            {user?.phone ? `+91 ${user.phone}` : '—'}
+                            {phoneVerified && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E3F5F1] text-[#0E7C86] text-[11px] font-medium">
+                                <CheckCircle size={11} /> Verified
+                              </span>
+                            )}
+                          </span>
+                        </InfoRow>
+                        <InfoRow Icon={Calendar} label="Date of Birth">{formatDate(form.dateOfBirth)}</InfoRow>
+                        <InfoRow Icon={User} label="Gender"><span className="capitalize">{form.gender || '—'}</span></InfoRow>
+                        <InfoRow Icon={MapPin} label="City">{user?.city || user?.address?.city || '—'}</InfoRow>
+                        <InfoRow Icon={Globe} label="Language">
+                          {Array.isArray(user?.languages) ? user.languages.join(', ') : user?.language || '—'}
+                        </InfoRow>
                       </div>
                     ) : (
-                      <p className="text-gray-500 text-center py-4">No professional information available</p>
+                      // Edit mode - form
+                      <form onSubmit={handleSaveProfile} className="space-y-4 mt-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">First Name</label>
+                            <input type="text" name="firstName" value={form.firstName} onChange={handleChange} required className={INPUT} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">Last Name</label>
+                            <input type="text" name="lastName" value={form.lastName} onChange={handleChange} required className={INPUT} />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">Email</label>
+                            <div className="flex items-center gap-2 h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl">
+                              <Mail size={16} className="text-gray-400" />
+                              <span className="text-sm text-gray-600 truncate">{user?.email}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">Phone</label>
+                            <div className="flex items-center gap-2 h-11 px-4 bg-gray-50 border border-gray-200 rounded-xl">
+                              <Phone size={16} className="text-gray-400" />
+                              <span className="text-sm text-gray-600">{user?.phone}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">Gender</label>
+                            <select name="gender" value={form.gender} onChange={handleChange} className={INPUT}>
+                              <option value="">Select gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-[#0B1B33] mb-1.5">Date of Birth</label>
+                            <div className="relative">
+                              <Calendar size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                              <input type="date" name="dateOfBirth" value={form.dateOfBirth} onChange={handleChange} className={`${INPUT} pl-10`} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+                          <button type="button" onClick={cancelEditing} className="h-11 px-6 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition">
+                            Cancel
+                          </button>
+                          <button type="submit" disabled={loading} className={PRIMARY_BTN}>
+                            {loading && <Loader2 size={18} className="animate-spin" />}
+                            {loading ? 'Saving...' : 'Save Changes'}
+                          </button>
+                        </div>
+                      </form>
                     )}
-                  </div>
-                )}
-              </div>
-            )}
+                  </section>
 
-            {/* Tab: Security (Change Password) */}
-            {activeTab === 'security' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 md:p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Shield size={24} className="text-blue-600" />
-                    <h2 className="text-xl font-bold text-gray-800">Security Settings</h2>
-                  </div>
-                  <div className="max-w-lg">
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-                      <div className="flex gap-3">
-                        <Shield size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h3 className="font-semibold text-amber-800 text-sm">Password Security Tips</h3>
-                          <p className="text-xs text-amber-700 mt-1">Use at least 8 characters with a mix of letters, numbers, and symbols. Never share your password with anyone.</p>
+                  {/* Provider Information Section (only for provider users) */}
+                  {user?.role === 'provider' && (
+                    <section className={`${CARD} p-5 sm:p-6`}>
+                      <div className="flex items-center gap-2.5 mb-4 text-[#0E7C86]">
+                        <Briefcase size={22} />
+                        <h2 className="text-lg font-bold text-[#0B1B33]">Professional Information</h2>
+                      </div>
+                      {providerLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 size={30} className="animate-spin text-[#0E7C86]" />
                         </div>
+                      ) : providerInfo ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-[#5B6B7F] mb-0.5">Business Name</p>
+                              <p className="text-sm font-semibold text-[#0B1B33]">{providerInfo.businessName || '—'}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-[#5B6B7F] mb-0.5">Years of Experience</p>
+                              <p className="text-sm font-semibold text-[#0B1B33]">{providerInfo.experience?.years || 0} years</p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-[#5B6B7F] mb-0.5">Bio</p>
+                            <p className="text-sm text-[#2B3A50]">{providerInfo.bio || '—'}</p>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-[#5B6B7F] mb-1">Verification Status</p>
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                providerInfo.verificationStatus === 'verified' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : providerInfo.verificationStatus === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {providerInfo.verificationStatus === 'verified' ? '✓ Verified' : 
+                                 providerInfo.verificationStatus === 'pending' ? '⏳ Pending' : '✗ Rejected'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm text-[#5B6B7F] mb-0.5">Service Radius</p>
+                              <p className="text-sm font-semibold text-[#0B1B33] flex items-center gap-1">
+                                <MapPin size={14} /> {providerInfo.serviceArea?.radius || 10} km
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => window.location.href = '/provider/profile'}
+                            className="text-[#0E7C86] hover:underline text-sm font-semibold flex items-center gap-1"
+                          >
+                            Manage Professional Profile <ArrowRight size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4 text-sm">No professional information available</p>
+                      )}
+                    </section>
+                  )}
+
+                  {/* Membership & Offers */}
+                  <section className={`${CARD} p-5 sm:p-6`}>
+                    <h2 className="text-lg font-bold text-[#0B1B33] mb-4">Membership &amp; Offers</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4">
+                      <div className="flex gap-4">
+                        <span className="w-16 h-16 shrink-0 rounded-2xl bg-amber-50 text-amber-500 grid place-items-center">
+                          <Crown size={32} aria-hidden="true" />
+                        </span>
+                        <div>
+                          <p className="font-bold text-[#0B1B33]">Puchhuu Member</p>
+                          <p className="mt-1 text-sm text-[#5B6B7F]">Enjoy exclusive offers, faster bookings and priority support.</p>
+                          <button
+                            type="button"
+                            onClick={() => navigate(ROUTES.offers)}
+                            className="mt-3 h-10 px-5 rounded-lg bg-[#E3F5F1] text-[#0E7C86] text-sm font-semibold hover:bg-[#D2EFEA] transition-colors"
+                          >
+                            View Benefits
+                          </button>
+                        </div>
+                      </div>
+                      <ul className="rounded-xl bg-[#E8F6F5] p-3.5 space-y-2.5">
+                        {[[Tag, 'Exclusive Offers'], [Zap, 'Priority Booking'], [Percent, 'Special Discounts']].map(([BIcon, text]) => (
+                          <li key={text} className="flex items-center gap-3 text-sm font-medium text-[#0B1B33]">
+                            <span className="w-8 h-8 rounded-lg bg-white text-[#0E7C86] grid place-items-center">
+                              <BIcon size={16} aria-hidden="true" />
+                            </span>
+                            {text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-5 min-w-0">
+                  {/* Profile Picture */}
+                  <section className={`${CARD} p-5 sm:p-6`}>
+                    <h2 className="text-lg font-bold text-[#0B1B33] mb-4">Profile Picture</h2>
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-24 shrink-0 rounded-full bg-gradient-to-br from-[#0E7C86] to-[#0B2545] grid place-items-center overflow-hidden shadow">
+                        {avatarPreview ? (
+                          <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={40} className="text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-[#2B3A50]">Update your profile picture</p>
+                        <p className="text-xs text-[#5B6B7F] mt-1">JPG, PNG up to 5MB</p>
                       </div>
                     </div>
-
-                    <form onSubmit={handlePasswordChange} className="space-y-5">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                        <div className="relative">
-                          <input
-                            type={showCurrentPassword ? "text" : "password"}
-                            value={passwordForm.currentPassword}
-                            onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                            required
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition pr-10"
-                            placeholder="Enter current password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                        <div className="relative">
-                          <input
-                            type={showNewPassword ? "text" : "password"}
-                            value={passwordForm.newPassword}
-                            onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                            required
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition pr-10"
-                            placeholder="Enter new password (min 8 characters)"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                        <div className="relative">
-                          <input
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={passwordForm.confirmPassword}
-                            onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                            required
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition pr-10"
-                            placeholder="Confirm new password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="pt-4 flex justify-end">
-                        <button
-                          type="submit"
-                          disabled={passwordLoading}
-                          className="px-8 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
-                        >
-                          {passwordLoading && <Loader2 size={18} className="animate-spin" />}
-                          {passwordLoading ? 'Updating...' : 'Update Password'}
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      {avatarFile ? (
+                        <button type="button" onClick={handleUploadAvatar} disabled={uploading} className={`${PRIMARY_BTN} px-3`}>
+                          {uploading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                          Save Photo
                         </button>
-                      </div>
-                    </form>
-                  </div>
+                      ) : (
+                        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className={`${PRIMARY_BTN} px-3`}>
+                          Change Photo
+                        </button>
+                      )}
+                      {avatarFile ? (
+                        <button type="button" onClick={cancelEditing} className="h-11 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                          Cancel
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          disabled={uploading || !avatarPreview}
+                          className="h-11 rounded-xl border border-red-300 text-sm font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-40"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* Account Settings */}
+                  <section className={`${CARD} p-5 sm:p-6`}>
+                    <h2 className="text-lg font-bold text-[#0B1B33] mb-2">Account Settings</h2>
+                    <div>
+                      <SettingRow Icon={Edit2} title="Edit Profile" sub="Update your personal information" onClick={openEdit} />
+                      <SettingRow Icon={Lock} title="Change Password" sub="Keep your account secure" onClick={() => setActiveTab('security')} />
+                      <SettingRow Icon={Bell} title="Manage Notifications" sub="Choose what notifications you receive" onClick={() => setActiveTab('notifications')} />
+                      <SettingRow
+                        Icon={Trash2}
+                        title="Delete Account"
+                        sub="Permanently delete your account"
+                        danger
+                        href={`mailto:${SUPPORT_EMAIL}?subject=Account%20deletion%20request`}
+                      />
+                    </div>
+                  </section>
                 </div>
               </div>
-            )}
 
-            {/* Tab: Notifications */}
-            {activeTab === 'notifications' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 md:p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Bell size={24} className="text-blue-600" />
-                    <h2 className="text-xl font-bold text-gray-800">Notification Preferences</h2>
-                  </div>
-                  <div className="space-y-4 max-w-lg">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <MailCheck size={20} className="text-blue-600" />
-                        <div>
-                          <p className="font-medium text-gray-800">Email Notifications</p>
-                          <p className="text-xs text-gray-500">Receive updates about bookings and offers via email</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleNotifChange('email', !notifPrefs.email)}
-                        disabled={notifLoading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          notifPrefs.email ? 'bg-emerald-500' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          notifPrefs.email ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
-                    </div>
+              {/* Refer & Earn banner */}
+              <section className="rounded-2xl bg-gradient-to-r from-[#0E7C86] via-[#12948F] to-[#5CC7C0] text-white p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
+                <div className="relative w-28 h-24 shrink-0 hidden sm:block" aria-hidden="true">
+                  <span className="absolute left-3 top-0 w-16 h-24 rounded-2xl bg-white/90 text-[#0E7C86] grid place-items-center shadow-lg -rotate-6">
+                    <Smartphone size={30} />
+                  </span>
+                  <span className="absolute right-0 bottom-0 w-14 h-14 rounded-2xl bg-amber-400 text-white grid place-items-center shadow-lg rotate-6">
+                    <Gift size={28} />
+                  </span>
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <h2 className="text-xl sm:text-2xl font-bold">Refer &amp; Earn</h2>
+                  <p className="mt-1 text-sm sm:text-base text-white/90">Invite your friends and earn exciting rewards</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(ROUTES.refer)}
+                  className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-white text-[#0B1B33] text-sm font-semibold hover:bg-[#E8F7F8] transition-colors shrink-0"
+                >
+                  Refer Now <ArrowRight size={16} />
+                </button>
+              </section>
+            </>
+          )}
 
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <Smartphone size={20} className="text-purple-600" />
-                        <div>
-                          <p className="font-medium text-gray-800">SMS Notifications</p>
-                          <p className="text-xs text-gray-500">Get SMS alerts for booking status changes</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleNotifChange('sms', !notifPrefs.sms)}
-                        disabled={notifLoading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          notifPrefs.sms ? 'bg-emerald-500' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          notifPrefs.sms ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
-                    </div>
+          {/* ============ TAB: Addresses (UI placeholder) ============ */}
+          {activeTab === 'addresses' &&
+            placeholderPanel(MapPin, 'My Addresses', 'Your saved addresses will appear here.')}
 
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <Globe size={20} className="text-orange-600" />
-                        <div>
-                          <p className="font-medium text-gray-800">Push Notifications</p>
-                          <p className="text-xs text-gray-500">Receive in-app notifications and reminders</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleNotifChange('push', !notifPrefs.push)}
-                        disabled={notifLoading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          notifPrefs.push ? 'bg-emerald-500' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          notifPrefs.push ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
-                    </div>
+          {/* ============ TAB: Payment Methods (UI placeholder) ============ */}
+          {activeTab === 'payments' &&
+            placeholderPanel(CreditCard, 'Payment Methods', 'Your saved payment methods will appear here.')}
+
+          {/* ============ TAB: Security (Change Password) ============ */}
+          {activeTab === 'security' && (
+            <section className={`${CARD} p-5 sm:p-7`}>
+              <div className="flex items-center gap-2.5 mb-5 text-[#0E7C86]">
+                <Shield size={22} />
+                <h2 className="text-lg font-bold text-[#0B1B33]">Security Settings</h2>
+              </div>
+              <div className="max-w-lg">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex gap-3">
+                  <Shield size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-amber-800 text-sm">Password Security Tips</h3>
+                    <p className="text-xs text-amber-700 mt-1">Use at least 8 characters with a mix of letters, numbers, and symbols. Never share your password with anyone.</p>
                   </div>
                 </div>
+
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <PasswordField
+                    label="Current Password"
+                    placeholder="Enter current password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                    show={showCurrentPassword}
+                    toggle={() => setShowCurrentPassword(!showCurrentPassword)}
+                  />
+                  <PasswordField
+                    label="New Password"
+                    placeholder="Enter new password (min 8 characters)"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                    show={showNewPassword}
+                    toggle={() => setShowNewPassword(!showNewPassword)}
+                  />
+                  <PasswordField
+                    label="Confirm New Password"
+                    placeholder="Confirm new password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                    show={showConfirmPassword}
+                    toggle={() => setShowConfirmPassword(!showConfirmPassword)}
+                  />
+                  <div className="pt-2 flex justify-end">
+                    <button type="submit" disabled={passwordLoading} className={PRIMARY_BTN}>
+                      {passwordLoading && <Loader2 size={18} className="animate-spin" />}
+                      {passwordLoading ? 'Updating...' : 'Update Password'}
+                    </button>
+                  </div>
+                </form>
               </div>
-            )}
-          </div>
+            </section>
+          )}
+
+          {/* ============ TAB: Notifications ============ */}
+          {activeTab === 'notifications' && (
+            <section className={`${CARD} p-5 sm:p-7`}>
+              <div className="flex items-center gap-2.5 mb-5 text-[#0E7C86]">
+                <Bell size={22} />
+                <h2 className="text-lg font-bold text-[#0B1B33]">Notification Preferences</h2>
+              </div>
+              <div className="space-y-3 max-w-lg">
+                {notifItems.map(({ key, Icon, color, title, sub }) => (
+                  <div key={key} className="flex items-center justify-between gap-4 p-4 bg-[#F4F8FA] rounded-xl">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Icon size={20} className={`${color} shrink-0`} />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-[#0B1B33]">{title}</p>
+                        <p className="text-xs text-[#5B6B7F]">{sub}</p>
+                      </div>
+                    </div>
+                    <Toggle
+                      on={!!notifPrefs[key]}
+                      onClick={() => handleNotifChange(key, !notifPrefs[key])}
+                      disabled={notifLoading}
+                      label={title}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </div>
+
+      <style>{`
+        .profile-noscroll::-webkit-scrollbar { display: none; }
+        .profile-noscroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };

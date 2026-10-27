@@ -2,55 +2,106 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { GoogleLogin } from '@react-oauth/google';
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  Phone, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  X,
-  CheckCircle,
-  AlertCircle
+import {
+  Mail,
+  Lock,
+  User,
+  Phone,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowLeft,
+  AlertCircle,
+  ShieldCheck,
+  IndianRupee,
+  Clock,
+  Star,
+  Wind,
+  Sparkles,
+  Sofa,
+  Droplets,
+  Zap,
+  PaintRoller,
 } from "lucide-react";
 import { apiFetch } from "../../services/api";
 
+/* ------------------------------------------------------------------
+   UI-ONLY SETTINGS (backend se koi lena-dena nahi)
+------------------------------------------------------------------ */
+
+// Left panel me aurat wali photo (transparent PNG best). Khali = sirf gradient + wave dikhega.
+const LOGIN_HERO_IMG = ''; // e.g. 'https://res.cloudinary.com/.../hero-woman.png'
+
+// "or continue with" + Google button. Jab Google login (GoogleOAuthProvider) ready ho tab true karo.
+const SHOW_SOCIAL_LOGIN = false;
+// Apple button abhi UI-only hai (click par "coming soon" message). Chahiye to true karo.
+const SHOW_APPLE_BUTTON = false;
+
+const LOGO_URL = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png";
+const MOBILE_LOGO_URL = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png";
+
+const FEATURES = [
+  { Icon: ShieldCheck, label: 'Verified Professionals' },
+  { Icon: IndianRupee, label: 'Transparent Pricing' },
+  { Icon: Clock, label: 'On-Time Service' },
+  { Icon: Star, label: '100% Satisfaction' },
+];
+
+const SERVICE_STRIP = [
+  { Icon: Wind, label: 'AC Service' },
+  { Icon: Sparkles, label: 'Home Cleaning' },
+  { Icon: Sofa, label: 'Sofa Cleaning' },
+  { Icon: Droplets, label: 'Plumbing' },
+  { Icon: Zap, label: 'Electrician' },
+  { Icon: PaintRoller, label: 'Painting' },
+];
+
+const INPUT_BASE =
+  "w-full h-12 border rounded-xl outline-none transition-all text-base focus:ring-2 focus:ring-[#0E7C86]/30 focus:border-[#0E7C86]";
+const inputState = (error) =>
+  error ? "border-red-500 bg-red-50" : "border-gray-200 bg-white";
+
 const PasswordInput = ({ value, onChange, placeholder, show, toggleShow, error }) => (
-  <div className="relative">
-    <input
-      type={show ? "text" : "password"}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      style={{ fontSize: '16px' }}
-      className={`w-full pl-11 pr-10 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base ${
-        error ? "border-red-500 bg-red-50" : "border-gray-200 bg-gray-50"
-      }`}
-    />
-    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-    <button
-      type="button"
-      onClick={toggleShow}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-    >
-      {show ? <EyeOff size={16} /> : <Eye size={16} />}
-    </button>
+  <div>
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        style={{ fontSize: '16px' }}
+        className={`${INPUT_BASE} pl-11 pr-11 ${inputState(error)}`}
+      />
+      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400" />
+      <button
+        type="button"
+        onClick={toggleShow}
+        aria-label={show ? "Hide password" : "Show password"}
+        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+      >
+        {show ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
     {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
   </div>
 );
 
-const InputField = ({ icon: Icon, ...props }) => (
-  <div className="relative">
-    <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-    <input
-      {...props}
-      style={{ fontSize: '16px' }}
-      className={`w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-base ${
-        props.error ? "border-red-500 bg-red-50" : "border-gray-200 bg-gray-50"
-      }`}
-    />
-    {props.error && <p className="text-red-500 text-xs mt-1 ml-1">{props.error}</p>}
+const InputField = ({ icon: Icon, error, prefix, ...props }) => (
+  <div>
+    <div className="relative">
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400" />
+      {prefix && (
+        <span className="absolute left-10 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sm text-gray-600 pr-2 border-r border-gray-200">
+          <span aria-hidden="true">🇮🇳</span> {prefix}
+        </span>
+      )}
+      <input
+        {...props}
+        style={{ fontSize: '16px' }}
+        className={`${INPUT_BASE} ${prefix ? 'pl-[6.75rem]' : 'pl-11'} pr-4 ${inputState(error)}`}
+      />
+    </div>
+    {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
   </div>
 );
 
@@ -81,6 +132,9 @@ const Login = ({ initialPanel = "signin" }) => {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, message: "" });
+
+  // UI only ("Keep me signed in" checkbox)
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
 
   useEffect(() => {
     setActivePanel(initialPanel);
@@ -259,240 +313,317 @@ const Login = ({ initialPanel = "signin" }) => {
     setGoogleLoading(false);
   };
 
-  return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-2 sm:p-4 animate-fadeIn overflow-y-auto">
-      <div className="relative w-full max-w-4xl my-4 sm:my-8 bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
-        <button
-          onClick={() => setShowAuth(false)}
-          className="absolute top-3 right-3 z-10 p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-        >
-          <X size={18} className="text-gray-600" />
-        </button>
+  /* ---------- UI helpers (no logic) ---------- */
+  const isSignin = activePanel === "signin";
 
-        {/* Mobile top branding */}
-        <div className="block sm:hidden bg-gradient-to-r from-blue-50 to-indigo-50 pt-8 pb-4 px-4 text-center">
-          <div className="flex justify-center mb-2">
-            <img 
-              src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png" 
-              alt="logo"
-              className="h-12"
+  const submitBtnCls =
+    "w-full h-12 bg-gradient-to-r from-[#0E7C86] to-[#12948F] hover:from-[#0B6A73] hover:to-[#0E7C86] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm";
+
+  const renderSocial = (googleText) => {
+    if (!SHOW_SOCIAL_LOGIN) return null;
+    return (
+      <div className="pt-1">
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+          <div className="relative flex justify-center text-xs"><span className="px-3 bg-white text-gray-400">or continue with</span></div>
+        </div>
+        <div className={`space-y-3 ${googleLoading ? 'opacity-60 pointer-events-none' : ''}`}>
+          <div className="flex justify-center rounded-xl border border-gray-200 py-1.5 overflow-hidden">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap={false}
+              theme="outline"
+              size="large"
+              text={googleText}
+              shape="rectangular"
+              width="100%"
             />
           </div>
-          <img 
-            src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png" 
-            alt="logo name"
-            className="h-8 mx-auto"
-          />
-          <p className="text-sm text-gray-600 mt-2">
-            {activePanel === "signin" ? "Welcome back! Sign in to continue" : "Create your account in seconds"}
-          </p>
+          {SHOW_APPLE_BUTTON && (
+            <button
+              type="button"
+              onClick={() => setGeneralError("Apple login is coming soon.")}
+              className="w-full h-12 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M16.4 12.7c0-2.4 2-3.5 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.2-1.2 3-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.5-1-2.5-3.9zM14 5.6c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z" />
+              </svg>
+              Continue with Apple
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-2 sm:p-4 bg-black/40 animate-fadeIn overflow-y-auto">
+      <div className="relative w-full max-w-6xl my-4 sm:my-8 bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row lg:min-h-[700px]">
+
+        {/* ================= LEFT: branding panel (desktop) ================= */}
+        <div className="relative hidden lg:flex lg:w-[56%] flex-col bg-gradient-to-br from-[#F4FBFB] via-white to-[#E4F3F2] overflow-hidden">
+          <div className="relative z-10 p-8 xl:p-10">
+            <img src={LOGO_URL} alt="Puchhuu" className="h-16 w-auto object-contain" />
+
+            <h2 className="mt-10 text-4xl xl:text-[44px] font-extrabold leading-[1.1] text-[#0B1B33] tracking-tight">
+              Professional<br />Home Services<br />
+              <span className="text-[#10A37F]">At Your Doorstep</span>
+            </h2>
+            <p className="mt-4 text-[15px] text-[#5B6B7F] max-w-xs">
+              Trusted experts for a cleaner, safer and more comfortable home.
+            </p>
+
+            <ul className="mt-6 space-y-3.5">
+              {FEATURES.map(({ Icon, label }) => (
+                <li key={label} className="flex items-center gap-3 text-sm font-medium text-[#1E2E45]">
+                  <span className="w-8 h-8 rounded-full bg-[#10A37F] text-white grid place-items-center">
+                    <Icon className="w-4 h-4" aria-hidden="true" />
+                  </span>
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Person photo (optional) */}
+          {LOGIN_HERO_IMG && (
+            <img
+              src={LOGIN_HERO_IMG}
+              alt=""
+              className="absolute right-0 bottom-24 h-[62%] w-auto object-contain object-bottom"
+            />
+          )}
+
+          {/* Teal waves */}
+          <svg
+            aria-hidden="true"
+            className="absolute bottom-0 left-0 w-full h-56"
+            viewBox="0 0 800 220"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,90 C140,30 300,150 460,100 C600,55 700,70 800,35 L800,220 L0,220 Z" fill="#7FD0CC" opacity="0.55" />
+            <path d="M0,130 C160,70 320,170 480,125 C620,85 720,100 800,70 L800,220 L0,220 Z" fill="#0E7C86" opacity="0.92" />
+          </svg>
+
+          {/* 50,000+ badge */}
+          <div className="absolute left-8 bottom-32 z-10 flex items-center gap-3 rounded-xl bg-[#0B1B33]/90 text-white pl-3 pr-5 py-3 shadow-lg">
+            <div className="flex -space-x-2">
+              {['from-amber-400 to-orange-500', 'from-pink-400 to-rose-500', 'from-sky-400 to-indigo-500'].map((g, i) => (
+                <span key={i} className={`w-9 h-9 rounded-full border-2 border-[#0B1B33] bg-gradient-to-br ${g} grid place-items-center text-xs font-bold`}>
+                  {['A', 'R', 'S'][i]}
+                </span>
+              ))}
+            </div>
+            <div>
+              <p className="text-lg font-bold leading-tight">50,000+</p>
+              <p className="text-[11px] text-white/75 leading-tight">Happy Customers in Rajasthan</p>
+            </div>
+          </div>
+
+          {/* Services strip */}
+          <ul className="absolute left-6 right-6 bottom-5 z-10 grid grid-cols-6 gap-2 rounded-2xl bg-white/95 p-2.5 shadow-lg">
+            {SERVICE_STRIP.map(({ Icon, label }) => (
+              <li key={label} className="flex flex-col items-center gap-1.5 rounded-xl bg-[#F4F8F9] py-3 px-1 text-center">
+                <Icon className="w-6 h-6 text-[#0E7C86]" aria-hidden="true" />
+                <span className="text-[11px] font-medium text-[#1E2E45] leading-tight">{label}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className="flex flex-col sm:flex-row">
-          {/* Left panel */}
-          <div className="hidden sm:flex sm:w-2/5 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 md:p-8 flex-col items-center justify-center text-gray-600">
-            <div className="mb-4">
-           <div className="flex flex-col items-center mb-3">
-  <img
-    src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png"
-    alt="INDIAN HOMEY"
-    className="h-20 sm:h-24 md:h-28 w-auto object-contain"
-  />
-</div>
-              {activePanel === "signin" ? (
-                <>
-                  <h2 className="text-2xl font-bold mb-1">Welcome back!</h2>
-                  <p className="text-blue-600 mb-4 text-sm">Login to access your account</p>
-                  <div className="space-y-1.5 text-xs text-gray-500">
-                    <div className="flex items-center gap-1.5"><CheckCircle size={12} /> Manage bookings</div>
-                    <div className="flex items-center gap-1.5"><CheckCircle size={12} /> Track professionals</div>
-                    <div className="flex items-center gap-1.5"><CheckCircle size={12} /> Exclusive offers</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold mb-1">Join us today!</h2>
-                  <p className="text-blue-600 mb-4 text-sm">Create your account in seconds</p>
-                  <div className="space-y-1.5 text-xs text-gray-500">
-                    <div className="flex items-center gap-1.5"><CheckCircle size={12} /> Book professionals</div>
-                    <div className="flex items-center gap-1.5"><CheckCircle size={12} /> Pay after service</div>
-                    <div className="flex items-center gap-1.5"><CheckCircle size={12} /> 24/7 support</div>
-                  </div>
-                </>
-              )}
-            </div>
+        {/* ================= RIGHT: form panel ================= */}
+        <div className="relative w-full lg:w-[44%] bg-[#EEF3F5] flex flex-col">
+          {/* Back to Home */}
+          <div className="flex justify-end px-4 pt-4 sm:px-6 sm:pt-5">
             <button
-              onClick={() => togglePanel(activePanel === "signin" ? "signup" : "signin")}
-              className="mt-2 text-xs font-medium text-gray-500 hover:text-blue-800 transition-colors"
+              type="button"
+              onClick={() => setShowAuth(false)}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1E2E45] hover:text-[#0E7C86] transition-colors"
             >
-              {activePanel === "signin" ? "Don't have an account? Sign Up →" : "Already have an account? Sign In →"}
+              <ArrowLeft size={16} /> Back to Home
             </button>
           </div>
 
-          {/* Right panel - form */}
-          <div className="w-full sm:w-3/5 p-4 sm:p-6 md:p-8 bg-white">
-            {generalError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-700 text-sm">
-                <AlertCircle size={16} />
-                <span>{generalError}</span>
-              </div>
-            )}
+          {/* Mobile / tablet branding */}
+          <div className="lg:hidden text-center px-4 pt-2 pb-1">
+            <img src={MOBILE_LOGO_URL} alt="Puchhuu" className="h-12 mx-auto object-contain" />
+            <p className="text-sm text-gray-600 mt-2">
+              {isSignin ? "Welcome back! Sign in to continue" : "Create your account in seconds"}
+            </p>
+          </div>
 
-            {activePanel === "signin" ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <h2 className="text-xl font-bold text-gray-800">Sign In</h2>
-                <InputField
-                  icon={Mail}
-                  type="email"
-                  placeholder="Email address"
-                  value={emailLogin}
-                  onChange={(e) => setEmailLogin(e.target.value)}
-                  error={fieldErrors.emailLogin}
-                />
-                <PasswordInput
-                  value={passwordLogin}
-                  onChange={(e) => setPasswordLogin(e.target.value)}
-                  placeholder="Password"
-                  show={showLoginPassword}
-                  toggleShow={() => setShowLoginPassword(!showLoginPassword)}
-                  error={fieldErrors.passwordLogin}
-                />
-                <div className="flex justify-end">
-                  <button type="button" className="text-xs text-blue-600 hover:text-blue-700">Forgot password?</button>
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Sign In"}
-                  {!loading && <ArrowRight size={16} />}
-                </button>
-                {/* <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                  <div className="relative flex justify-center text-xs"><span className="px-2 bg-white text-gray-400">Or continue with</span></div>
-                </div> */}
-                {/* <div className="flex justify-center">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap={false}
-                    theme="outline"
-                    size="large"
-                    text="continue_with"
-                    shape="rectangular"
-                    width="100%"
-                  />
-                </div> */}
-                <div className="block sm:hidden text-center mt-4">
+          <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-5 sm:p-7">
+
+              {/* Tabs */}
+              <div className="grid grid-cols-2 border-b border-gray-200 mb-6" role="tablist">
+                {[['signin', 'Login'], ['signup', 'Sign Up']].map(([key, label]) => (
                   <button
-                    onClick={() => togglePanel("signup")}
-                    className="text-xs  font-medium"
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activePanel === key}
+                    onClick={() => togglePanel(key)}
+                    className={`pb-3 -mb-px text-sm font-semibold border-b-2 transition-colors ${
+                      activePanel === key
+                        ? "text-[#0E7C86] border-[#0E7C86]"
+                        : "text-gray-500 border-transparent hover:text-gray-700"
+                    }`}
                   >
-                    Don't have an account?<span className="text-blue-800"> Sign Up</span>
+                    {label}
                   </button>
+                ))}
+              </div>
+
+              {generalError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-700 text-sm">
+                  <AlertCircle size={16} />
+                  <span>{generalError}</span>
                 </div>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-3">
-                <h2 className="text-xl font-bold text-gray-800">Create Account</h2>
-                <div className="grid grid-cols-2 gap-2">
-                  <InputField
-                    icon={User}
-                    type="text"
-                    placeholder="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    error={fieldErrors.firstName}
-                  />
-                  <InputField
-                    icon={User}
-                    type="text"
-                    placeholder="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    error={fieldErrors.lastName}
-                  />
-                </div>
-                <InputField
-                  icon={Mail}
-                  type="email"
-                  placeholder="Email address"
-                  value={emailReg}
-                  onChange={(e) => setEmailReg(e.target.value)}
-                  error={fieldErrors.emailReg}
-                />
-                <InputField
-                  icon={Phone}
-                  type="tel"
-                  placeholder="Mobile number (10 digits)"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  error={fieldErrors.phone}
-                />
-                <PasswordInput
-                  value={passwordReg}
-                  onChange={(e) => setPasswordReg(e.target.value)}
-                  placeholder="Password (min 8 characters)"
-                  show={showRegPassword}
-                  toggleShow={() => setShowRegPassword(!showRegPassword)}
-                  error={fieldErrors.passwordReg}
-                />
-                {passwordReg && (
-                  <div className="mt-0">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
-                        <div className={`h-full ${passwordStrength.score <= 2 ? "w-1/3 bg-red-500" : passwordStrength.score <= 4 ? "w-2/3 bg-yellow-500" : "w-full bg-green-500"}`} />
-                      </div>
-                      <span className="text-xs text-gray-500">{passwordStrength.message}</span>
-                    </div>
+              )}
+
+              {isSignin ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="text-center mb-2">
+                    <h2 className="text-2xl font-bold text-[#0B1B33]">Welcome Back</h2>
+                    <p className="text-sm text-gray-500 mt-1">Login to your Puchhuu account</p>
                   </div>
-                )}
-                <PasswordInput
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
-                  show={showConfirmPassword}
-                  toggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
-                  error={fieldErrors.confirmPassword}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Sign Up"}
-                  {!loading && <ArrowRight size={16} />}
-                </button>
-                {/* <div className="relative my-3">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                  <div className="relative flex justify-center text-xs"><span className="px-2 bg-white text-gray-400">Or sign up with</span></div>
-                </div> */}
-                {/* <div className="flex justify-center">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap={false}
-                    theme="outline"
-                    size="large"
-                    text="signup_with"
-                    shape="rectangular"
-                    width="100%"
+
+                  <InputField
+                    icon={Mail}
+                    type="email"
+                    placeholder="Enter email address"
+                    value={emailLogin}
+                    onChange={(e) => setEmailLogin(e.target.value)}
+                    error={fieldErrors.emailLogin}
                   />
-                </div> */}
-                <div className="block sm:hidden text-center mt-4">
-                  <button
-                    onClick={() => togglePanel("signin")}
-                    className="text-xs   font-medium"
-                  >
-                    Already have an account?<span className="text-blue-800"> Sign In</span>
+                  <PasswordInput
+                    value={passwordLogin}
+                    onChange={(e) => setPasswordLogin(e.target.value)}
+                    placeholder="Enter password"
+                    show={showLoginPassword}
+                    toggleShow={() => setShowLoginPassword(!showLoginPassword)}
+                    error={fieldErrors.passwordLogin}
+                  />
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={keepSignedIn}
+                        onChange={(e) => setKeepSignedIn(e.target.checked)}
+                        className="w-4 h-4 rounded accent-[#0E7C86]"
+                        style={{ fontSize: '16px' }}
+                      />
+                      Keep me signed in
+                    </label>
+                    <button type="button" className="text-xs font-medium text-[#0E7C86] hover:underline">Forgot Password?</button>
+                  </div>
+
+                  <button type="submit" disabled={loading} className={submitBtnCls}>
+                    {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Login"}
+                    {!loading && <ArrowRight size={16} />}
                   </button>
-                </div>
-              </form>
-            )}
+
+                  {renderSocial("continue_with")}
+
+                  <p className="text-center text-sm text-gray-500 pt-1">
+                    New to Puchhuu?{" "}
+                    <button type="button" onClick={() => togglePanel("signup")} className="font-semibold text-[#0E7C86] hover:underline">
+                      Create an Account
+                    </button>
+                  </p>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} className="space-y-3">
+                  <div className="text-center mb-1">
+                    <h2 className="text-2xl font-bold text-[#0B1B33]">Create Account</h2>
+                    <p className="text-sm text-gray-500 mt-1">Join Puchhuu in seconds</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <InputField
+                      icon={User}
+                      type="text"
+                      placeholder="First name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      error={fieldErrors.firstName}
+                    />
+                    <InputField
+                      icon={User}
+                      type="text"
+                      placeholder="Last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      error={fieldErrors.lastName}
+                    />
+                  </div>
+                  <InputField
+                    icon={Mail}
+                    type="email"
+                    placeholder="Email address"
+                    value={emailReg}
+                    onChange={(e) => setEmailReg(e.target.value)}
+                    error={fieldErrors.emailReg}
+                  />
+                  <InputField
+                    icon={Phone}
+                    type="tel"
+                    prefix="+91"
+                    placeholder="Mobile number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    error={fieldErrors.phone}
+                  />
+                  <PasswordInput
+                    value={passwordReg}
+                    onChange={(e) => setPasswordReg(e.target.value)}
+                    placeholder="Password (min 8 characters)"
+                    show={showRegPassword}
+                    toggleShow={() => setShowRegPassword(!showRegPassword)}
+                    error={fieldErrors.passwordReg}
+                  />
+                  {passwordReg && (
+                    <div className="mt-0">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                          <div className={`h-full ${passwordStrength.score <= 2 ? "w-1/3 bg-red-500" : passwordStrength.score <= 4 ? "w-2/3 bg-yellow-500" : "w-full bg-green-500"}`} />
+                        </div>
+                        <span className="text-xs text-gray-500">{passwordStrength.message}</span>
+                      </div>
+                    </div>
+                  )}
+                  <PasswordInput
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm password"
+                    show={showConfirmPassword}
+                    toggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
+                    error={fieldErrors.confirmPassword}
+                  />
+
+                  <button type="submit" disabled={loading} className={submitBtnCls}>
+                    {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Sign Up"}
+                    {!loading && <ArrowRight size={16} />}
+                  </button>
+
+                  {renderSocial("signup_with")}
+
+                  <p className="text-center text-sm text-gray-500 pt-1">
+                    Already have an account?{" "}
+                    <button type="button" onClick={() => togglePanel("signin")} className="font-semibold text-[#0E7C86] hover:underline">
+                      Sign In
+                    </button>
+                  </p>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; backdrop-filter: blur(0); }

@@ -1,10 +1,11 @@
 // src/pages/Home.jsx
 import React, { useRef, useState, useEffect } from 'react';
+// import TrendingSection from '../components/TrendingSection'; // (hidden for now)
 import { Link } from 'react-router-dom';
 import {
   ShieldCheck, IndianRupee, Clock, Star, ChevronLeft, ChevronRight,
   MoreHorizontal, Wind, Sparkles, Wrench, Zap, PaintRoller, CarFront, Flower2,
-  Bug, Hammer, Sofa, Scissors, Droplets, Grid2x2, ArrowRight, Users,
+  Bug, Hammer, Sofa, Scissors, Droplets, Grid2x2, ArrowRight, ArrowLeft, Users,
 } from 'lucide-react';
 import {
   fetchCategories,
@@ -12,7 +13,7 @@ import {
   fetchPopularServices,
   fetchServices
 } from '../services/api';
-import InfiniteReviewsMarquee from '../components/SliderImages';
+// import InfiniteReviewsMarquee from '../components/SliderImages'; // (hidden for now)
 import InfiniteProvidersMarquee from '../components/InfiniteProvidersMarquee';
 
 const desktopBgImage = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792055959/378c9470-484d-4d3e-b4d1-9054b714fd20.png";
@@ -107,124 +108,226 @@ const ratingOf = (s) => {
   return typeof r === 'number' && r > 0 ? r : null;
 };
 
-// One scroll row for every horizontal list
-const ScrollRow = ({ label, step = 400, children }) => {
-  const ref = useRef(null);
-  const scroll = (direction) => {
-    if (ref.current) ref.current.scrollBy({ left: direction === 'left' ? -step : step, behavior: 'smooth' });
+/* ---------- Shared helpers for optional service fields (nothing is invented) ---------- */
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
+const reviewsOf = (s) => num(s.rating?.count ?? s.reviewCount ?? s.reviewsCount);
+const mrpOf = (s) => {
+  const mrp = num(s.originalPrice ?? s.mrp ?? s.compareAtPrice);
+  const price = num(Number(s.basePrice));
+  return mrp && price && mrp > price ? mrp : null;
+};
+const compact = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, '')}K` : String(n));
+
+/* ---------- Most Booked section (minimal, square cards) ----------
+   UI only. Uses the same `popularServices` array Home already loads, no API calls.
+   Rating and MRP show only if the API returns them. "Instant" shows only if the API sends
+   `instant` / `isInstant` as true. */
+const MostBookedCard = ({ service }) => {
+  const img = service.images?.[0]?.url;
+  const rating = ratingOf(service);
+  const mrp = mrpOf(service);
+  const price = Number(service.basePrice);
+  const hasPrice = service.basePrice !== undefined && service.basePrice !== null && service.basePrice !== '' && Number.isFinite(price);
+  const instant = service.instant === true || service.isInstant === true;
+
+  return (
+    <li className="snap-start shrink-0 w-[44vw] max-w-[200px] sm:w-[200px] lg:w-[calc((100%-4rem)/5)] lg:max-w-none">
+      <Link to={`/service/${service.slug}`} className={`group block rounded-2xl ${FOCUS}`}>
+        <div className="relative aspect-square rounded-2xl bg-[#F0F2F4] overflow-hidden">
+          {img ? (
+            <img src={img} alt="" width="400" height="400" loading="lazy" decoding="async"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none" />
+          ) : <div className="absolute inset-0 bg-gradient-to-br from-[#0E7C86]/15 to-[#0B2545]/10" aria-hidden="true" />}
+        </div>
+
+        <div className="pt-3">
+          <h3 className="text-[15px] font-medium text-[#111827] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
+          {(rating || instant) && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-[#374151]">
+              {rating && (
+                <>
+                  <Star className="w-3.5 h-3.5 text-[#4B5563] fill-[#4B5563]" aria-hidden="true" />
+                  <span>{Math.round(rating * 100) / 100}</span>
+                </>
+              )}
+              {rating && instant && <span aria-hidden="true" className="text-[#9CA3AF]">•</span>}
+              {instant && (
+                <span className="inline-flex items-center gap-0.5 text-xs text-[#4B5563]">
+                  <Zap className="w-3.5 h-3.5 text-[#0B8A5B] fill-[#0B8A5B]" aria-hidden="true" />Instant
+                </span>
+              )}
+            </p>
+          )}
+          {hasPrice && (
+            <p className="mt-1 flex items-baseline gap-2 flex-wrap text-sm text-[#111827]">
+              <span>₹{service.basePrice}</span>
+              {mrp && <span className="text-[#6B7280] line-through">₹{mrp}</span>}
+            </p>
+          )}
+        </div>
+      </Link>
+    </li>
+  );
+};
+
+const MostBookedSection = ({ services = [], id = 'popular-title' }) => {
+  const rowRef = useRef(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(true);
+
+  if (!services.length) return null;
+
+  const update = () => {
+    const el = rowRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 4);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
   };
+  const scrollBy = (dir) => {
+    const el = rowRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+  };
+
   const arrow = (dir) => (
     <button
       type="button"
-      onClick={() => scroll(dir)}
-      aria-label={`Scroll ${dir}: ${label}`}
-      className={`absolute ${dir === 'left' ? '-left-4' : '-right-4'} top-1/2 -translate-y-1/2 z-20 hidden lg:flex items-center justify-center w-11 h-11 rounded-full bg-white border border-[#E3E8EC] text-[#0B2545] shadow-md hover:bg-[#0E7C86] hover:text-white hover:border-[#0E7C86] transition-colors ${FOCUS}`}
+      onClick={() => scrollBy(dir)}
+      aria-label={dir < 0 ? 'Previous most booked services' : 'Next most booked services'}
+      className={`absolute top-[calc((100%-5.5rem)/2)] -translate-y-1/2 ${dir < 0 ? '-left-5' : '-right-5'} z-20 hidden lg:grid w-11 h-11 place-items-center rounded-full bg-white border border-[#E5E7EB] text-[#111827] shadow-md hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
     >
-      {dir === 'left' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+      {dir < 0 ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
     </button>
   );
-  return (
-    <div className="relative">
-      {arrow('left')}
-      <div
-        ref={ref}
-        role="region"
-        aria-label={label}
-        tabIndex={0}
-        className={`flex gap-3 md:gap-5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-proximity -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 pb-3 ${FOCUS} rounded-xl`}
-      >
-        {children}
-      </div>
-      {arrow('right')}
-    </div>
-  );
-};
 
-const SectionHeader = ({ id, title, subtitle, action }) => (
-  <div className="flex items-end justify-between gap-4 mb-4 md:mb-6">
-    <div className="min-w-0">
-      <h2 id={id} className="text-xl md:text-[28px] font-extrabold tracking-tight text-[#0B2545] leading-tight">{title}</h2>
-      {subtitle && <p className="mt-1 text-sm md:text-base text-[#5B6B7F]">{subtitle}</p>}
-    </div>
-    {action}
-  </div>
-);
-
-// Image card with overlaid text (Trending section)
-const TrendingCard = ({ service }) => {
-  const img = service.images?.[0]?.url;
-  const hasPrice = service.basePrice !== undefined && service.basePrice !== null && service.basePrice !== '';
   return (
-    <Link
-      to={`/service/${service.slug}`}
-      className={`group relative shrink-0 snap-start w-[72vw] max-w-[300px] sm:w-[300px] lg:w-[360px] aspect-[16/10] rounded-2xl overflow-hidden bg-[#0B3B45] ${FOCUS}`}
-    >
-      {img ? (
-        <img src={img} alt="" width="600" height="375" loading="lazy" decoding="async"
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none" />
-      ) : <div className="absolute inset-0 bg-gradient-to-br from-[#0E7C86] to-[#0B2545]" aria-hidden="true" />}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0B2545]/85 via-[#0B2545]/45 to-transparent" aria-hidden="true" />
-      <div className="absolute inset-0 p-4 flex flex-col justify-between">
-        <div>
-          <h3 className="text-white font-bold text-lg leading-snug line-clamp-2 max-w-[75%]">{service.name}</h3>
-          {hasPrice && <p className="mt-1 text-[#8EE3DC] font-bold text-xl">₹{service.basePrice}</p>}
+    <section aria-labelledby={id} className="py-7 md:py-11 bg-white">
+      <div className={WRAP}>
+        <h2 id={id} className="text-2xl md:text-[32px] font-bold tracking-tight text-[#111827] leading-tight">Most booked services</h2>
+
+        <div className="relative mt-6">
+          {canPrev && arrow(-1)}
+          <ul
+            ref={rowRef}
+            onScroll={update}
+            aria-label="Most booked services"
+            className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-proximity pb-1 -mx-1 px-1"
+          >
+            {services.slice(0, 8).map((svc) => <MostBookedCard key={svc._id} service={svc} />)}
+          </ul>
+          {canNext && arrow(1)}
         </div>
-        <span className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-white text-[#0B2545] text-[13px] font-semibold w-fit group-hover:bg-[#0E7C86] group-hover:text-white transition-colors">
-          Book now <ChevronRight className="w-4 h-4" aria-hidden="true" />
-        </span>
       </div>
-    </Link>
+    </section>
   );
 };
 
-// Compact card: image on top, details below (Most booked + category rows)
-const ServiceCard = ({ service }) => {
+/* ---------- Category row section (minimal, borderless cards) ----------
+   Used for every category (AC Repair, Cleaning, etc.).
+   UI only. Same `servicesByCategory` data, no API calls.
+   Subtitle shows only if the category has a description; rating, reviews and MRP only if the API returns them. */
+const CategoryServiceCard = ({ service }) => {
   const img = service.images?.[0]?.url;
-  const hasPrice = service.basePrice !== undefined && service.basePrice !== null && service.basePrice !== '';
   const rating = ratingOf(service);
+  const reviews = reviewsOf(service);
+  const mrp = mrpOf(service);
+  const price = Number(service.basePrice);
+  const hasPrice = service.basePrice !== undefined && service.basePrice !== null && service.basePrice !== '' && Number.isFinite(price);
+
   return (
-    <Link
-      to={`/service/${service.slug}`}
-      className={`group shrink-0 snap-start w-[42vw] max-w-[190px] sm:w-[200px] lg:w-[240px] bg-white rounded-2xl border border-[#E3E8EC] overflow-hidden hover:shadow-[0_14px_30px_-16px_rgba(11,37,69,0.4)] transition-shadow ${FOCUS}`}
-    >
-      <div className="aspect-[4/3] bg-[#F0F6F7] overflow-hidden">
-        {img ? (
-          <img src={img} alt="" width="400" height="300" loading="lazy" decoding="async"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none" />
-        ) : <div className="w-full h-full bg-gradient-to-br from-[#0E7C86]/20 to-[#0B2545]/10" aria-hidden="true" />}
-      </div>
-      <div className="p-3">
-        <h3 className="text-[13.5px] md:text-[15px] font-semibold text-[#0B2545] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
-        {hasPrice && (
-          <p className="mt-1.5 text-[15px] font-bold text-[#0E7C86]">
-            ₹{service.basePrice}
-            {service.priceUnit && <span className="text-[#6B7A8D] font-medium text-xs"> {String(service.priceUnit).replace(/_/g, ' ')}</span>}
-          </p>
-        )}
-        {rating && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-[#5B6B7F]">
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" aria-hidden="true" />
-            <span className="font-semibold text-[#0B2545]">{rating.toFixed(1)}</span>
-          </p>
-        )}
-      </div>
-    </Link>
+    <li className="snap-start shrink-0 w-[70vw] max-w-[300px] sm:w-[260px] lg:w-[calc((100%-4rem)/5)] lg:max-w-none">
+      <Link to={`/service/${service.slug}`} className={`group block rounded-2xl ${FOCUS}`}>
+        <div className="relative aspect-[4/3] rounded-2xl bg-[#F0F2F4] overflow-hidden">
+          {img ? (
+            <img src={img} alt="" width="480" height="360" loading="lazy" decoding="async"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none" />
+          ) : <div className="absolute inset-0 bg-gradient-to-br from-[#0E7C86]/15 to-[#0B2545]/10" aria-hidden="true" />}
+        </div>
+
+        <div className="pt-3 px-0.5">
+          <h3 className="text-[15px] font-medium text-[#0B1B33] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
+          {rating && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-[#0B1B33]">
+              <Star className="w-4 h-4 text-amber-400 fill-amber-400" aria-hidden="true" />
+              <span>{Math.round(rating * 100) / 100}</span>
+              {reviews && <span className="text-[#8A94A3]">({compact(reviews)})</span>}
+            </p>
+          )}
+          {hasPrice && (
+            <p className="mt-2 flex items-baseline gap-2.5 flex-wrap">
+              <span className="text-xl font-bold text-[#0B1B33]">₹{service.basePrice}</span>
+              {mrp && <span className="text-sm text-[#8A94A3] line-through">₹{mrp}</span>}
+            </p>
+          )}
+        </div>
+      </Link>
+    </li>
   );
 };
 
-const ServiceRowSection = ({ id, title, subtitle, services, tint, action, variant = 'card' }) => (
-  <section aria-labelledby={id} className={`py-7 md:py-11 ${tint ? 'bg-[#F6F8F9]' : 'bg-white'}`}>
-    <div className={WRAP}>
-      <SectionHeader id={id} title={title} subtitle={subtitle} action={action} />
-      <ScrollRow label={title}>
-        {services.slice(0, 8).map((service) =>
-          variant === 'trending'
-            ? <TrendingCard key={service._id} service={service} />
-            : <ServiceCard key={service._id} service={service} />)}
-      </ScrollRow>
-    </div>
-  </section>
-);
+const CategoryRowSection = ({ category, services }) => {
+  const rowRef = useRef(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(true);
+  const titleId = `cat-title-${category._id}`;
+  const subtitle = typeof category.description === 'string' ? category.description.trim() : '';
+
+  const update = () => {
+    const el = rowRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 4);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+  const scrollBy = (dir) => {
+    const el = rowRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+  };
+
+  const navBtn = (dir, enabled) => (
+    <button
+      type="button"
+      onClick={() => scrollBy(dir)}
+      disabled={!enabled}
+      aria-label={`${dir < 0 ? 'Previous' : 'Next'} ${category.name} services`}
+      className={`hidden sm:grid w-11 h-11 place-items-center rounded-full border text-[#0B1B33] transition-colors disabled:bg-[#F3F4F6] disabled:border-transparent disabled:text-[#9AA3AF] disabled:cursor-not-allowed bg-white border-[#E5E7EB] hover:bg-[#F3F4F6] ${FOCUS}`}
+    >
+      {dir < 0 ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+    </button>
+  );
+
+  return (
+    <section aria-labelledby={titleId} className="py-7 md:py-11 bg-white">
+      <div className={WRAP}>
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs md:text-sm font-medium uppercase tracking-wider text-[#6B7280]">Popular services</p>
+            <h2 id={titleId} className="mt-1 text-[28px] sm:text-4xl md:text-[44px] font-extrabold tracking-tight text-[#0B1B33] leading-[1.1]">{category.name}</h2>
+            {subtitle && <p className="mt-2 text-sm md:text-base text-[#6B7280] line-clamp-2">{subtitle}</p>}
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link
+              to={`/category/${category.slug}`}
+              aria-label={`See all ${category.name} services`}
+              className={`inline-flex items-center gap-1.5 h-11 px-3 sm:mr-4 rounded-lg text-sm md:text-base font-semibold text-[#0B1B33] hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
+            >
+              See all <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+            {navBtn(-1, canPrev)}{navBtn(1, canNext)}
+          </div>
+        </div>
+
+        <ul
+          ref={rowRef}
+          onScroll={update}
+          aria-label={`${category.name} services`}
+          className="mt-7 flex gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-proximity pb-1 -mx-1 px-1"
+        >
+          {services.slice(0, 8).map((svc) => <CategoryServiceCard key={svc._id} service={svc} />)}
+        </ul>
+      </div>
+    </section>
+  );
+};
 
 /* ---------- Hero data + tile ---------- */
 
@@ -267,6 +370,282 @@ const HeroTile = ({ label, image, Icon, to, span }) => {
     ? <Link to={to} className={cls}>{body}</Link>
     : <a href="#categories" className={cls}>{body}</a>;
 };
+
+/* ---------- In the spotlight (promo banners) ----------
+   UI only. Edit the SPOTLIGHT list below to change the banners.
+   - match:        category name regex, the banner links to that category (falls back to #categories)
+   - serviceMatch: optional service name regex, the banner links to that service and uses its photo
+   - image:        your own photo URL (optional if serviceMatch finds a service with an image)
+   - startingAt:   optional number, shows "Starting ₹X" only when you set it
+   - tag:          optional small label, e.g. "New launch"
+   - theme:        'light' | 'dark' | 'split' */
+const SPOTLIGHT = [
+  {
+    id: 'glow', theme: 'light', bg: '#C7CBAE', tag: 'New launch',
+    title: 'Japanese glow rituals', subtitle: '', startingAt: null, cta: 'Book now',
+    match: /salon|spa|beauty/i, serviceMatch: null,
+    image: 'https://res.cloudinary.com/djtvxmttf/image/upload/v1793016892/b863e97d-44e8-40c9-9e14-c7cb576954af.png',
+  },
+  {
+    id: 'bathroom', theme: 'dark', bg: '#2F4B40', tag: '',
+    title: 'Deep clean your bathroom', subtitle: 'Intense bathroom cleaning', startingAt: null, cta: 'Book now',
+    match: /clean/i, serviceMatch: /bathroom/i,
+    image: '',
+  },
+  {
+    id: 'repairs', theme: 'split', bg: '#0A63C9', tag: '',
+    title: 'Home repairs at affordable prices', subtitle: 'Electricians, plumbers, carpenters', startingAt: null, cta: 'Book now',
+    match: /electric|plumb|carpent|repair/i, serviceMatch: null,
+    image: 'https://res.cloudinary.com/djtvxmttf/image/upload/v1793017283/2b0f9a52-ddb8-4782-a3b4-e8ce16431571.png',
+  },
+];
+
+const SpotlightCard = ({ item, to, image }) => {
+  const isDark = item.theme === 'dark' || item.theme === 'split';
+  const text = isDark ? 'text-white' : 'text-[#111827]';
+  const sub = isDark ? 'text-white/85' : 'text-[#374151]';
+  const btn = item.theme === 'light'
+    ? 'bg-white text-[#111827]'
+    : item.theme === 'dark'
+      ? 'bg-[#111827] text-white'
+      : 'bg-[#0A4C9A] text-white';
+  const isSplit = item.theme === 'split';
+
+  const body = (
+    <>
+      {isSplit ? (
+        <>
+          {image && <img src={image} alt="" loading="lazy" decoding="async" className="absolute right-0 top-0 h-full w-[40%] object-cover" />}
+        </>
+      ) : (
+        <>
+          {image && <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover object-right transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none" />}
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(90deg, ${item.bg} 0%, ${item.bg}E6 38%, ${item.bg}00 78%)` }}
+            aria-hidden="true"
+          />
+        </>
+      )}
+
+      {item.tag && (
+        <span className="absolute top-0 left-4 rounded-b-md bg-[#6B0F2E] text-white text-[11px] font-medium px-2.5 py-1">{item.tag}</span>
+      )}
+
+      <div className={`absolute inset-y-0 left-0 flex flex-col justify-center p-5 sm:p-6 ${isSplit ? 'w-[64%]' : 'w-[62%]'}`}>
+        <h3 className={`text-xl sm:text-2xl font-semibold leading-tight ${text}`}>{item.title}</h3>
+        {item.subtitle && <p className={`mt-1.5 text-sm ${sub}`}>{item.subtitle}</p>}
+        {item.startingAt ? <p className={`mt-1.5 text-sm ${sub}`}>Starting ₹{item.startingAt}</p> : null}
+        <span className={`mt-4 inline-flex items-center h-10 px-4 rounded-lg text-sm font-medium w-fit ${btn}`}>{item.cta || 'Book now'}</span>
+      </div>
+    </>
+  );
+
+  const cls = `group relative block h-[200px] sm:h-[220px] rounded-2xl overflow-hidden ${FOCUS}`;
+  const style = { backgroundColor: item.bg };
+  return to.startsWith('#')
+    ? <a href={to} className={cls} style={style}>{body}</a>
+    : <Link to={to} className={cls} style={style}>{body}</Link>;
+};
+
+const SpotlightSection = ({ categories, services }) => {
+  const rowRef = useRef(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+
+  const update = () => {
+    const el = rowRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 4);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+  useEffect(() => {
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const scrollBy = (dir) => {
+    const el = rowRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+  };
+
+  const resolved = SPOTLIGHT.map((item) => {
+    const svc = item.serviceMatch ? services.find((x) => item.serviceMatch.test(x.name)) : null;
+    const cat = item.match ? categories.find((x) => item.match.test(x.name)) : null;
+    const to = svc ? `/service/${svc.slug}` : cat ? `/category/${cat.slug}` : '#categories';
+    const image = item.image || svc?.images?.[0]?.url || '';
+    return { item, to, image };
+  });
+
+  const arrow = (dir, show) => show && (
+    <button
+      type="button"
+      onClick={() => scrollBy(dir)}
+      aria-label={dir < 0 ? 'Previous spotlight' : 'Next spotlight'}
+      className={`absolute top-1/2 -translate-y-1/2 ${dir < 0 ? '-left-5' : '-right-5'} z-20 hidden lg:grid w-11 h-11 place-items-center rounded-full bg-white border border-[#E5E7EB] text-[#111827] shadow-md hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
+    >
+      {dir < 0 ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+    </button>
+  );
+
+  return (
+    <section aria-labelledby="spotlight-title" className="py-7 md:py-11 bg-white">
+      <div className={WRAP}>
+        <h2 id="spotlight-title" className="text-2xl md:text-[32px] font-bold tracking-tight text-[#111827] leading-tight">In the spotlight</h2>
+        <div className="relative mt-6">
+          {arrow(-1, canPrev)}
+          <ul
+            ref={rowRef}
+            onScroll={update}
+            aria-label="In the spotlight"
+            className="flex gap-4 md:gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-proximity -mx-1 px-1"
+          >
+            {resolved.map(({ item, to, image }) => (
+              <li key={item.id} className="snap-start shrink-0 w-[86vw] max-w-[440px] sm:w-[400px] lg:w-[calc((100%-3rem)/3)] lg:max-w-none">
+                <SpotlightCard item={item} to={to} image={image} />
+              </li>
+            ))}
+          </ul>
+          {arrow(1, canNext)}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ---------- Promo banner (Native RO Water Purifier) ----------
+   UI only. Edit PROMOS to change the banner text, colours or photo.
+   - match:     category name regex. The banner links to that category (falls back to #categories).
+   - image:     your product photo URL (PNG with transparent background looks best, fit: 'contain').
+   - tag / highlight: optional lines.
+   Offer text (e.g. "Up to ₹4,300 off") is only what you write here, so keep it in sync with real offers. */
+const PROMOS = [
+  {
+    id: 'native-ro', always: true, from: '#4A2BC2', to: '#1B0E5E', fit: 'contain', Icon: Droplets,
+    tag: 'Native Festive Days • Up to ₹4,300 off',
+    title: 'Native RO Water Purifier', highlight: 'Now at its lowest price ever', cta: 'Buy now',
+    match: /water|purifier|smart/i, image: '',
+  },
+];
+
+const PromoSlide = ({ promo, to, image }) => {
+  const PromoIcon = promo.Icon;
+  const cls = `group relative block h-[240px] sm:h-[300px] lg:h-[340px] rounded-2xl overflow-hidden ${FOCUS}`;
+  const style = { background: `linear-gradient(120deg, ${promo.from} 0%, ${promo.to} 100%)` };
+
+  const body = (
+    <>
+      <PromoIcon className="absolute right-[8%] top-1/2 -translate-y-1/2 w-40 h-40 sm:w-56 sm:h-56 text-white/10" aria-hidden="true" />
+      {image && (
+        promo.fit === 'contain'
+          ? <img src={image} alt="" loading="lazy" decoding="async" className="absolute right-[4%] bottom-0 h-[92%] w-[40%] object-contain object-bottom" />
+          : (
+            <>
+              <img src={image} alt="" loading="lazy" decoding="async" className="absolute right-0 top-0 h-full w-[58%] object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none" />
+              <div className="absolute inset-y-0 right-0 w-[58%]" style={{ background: `linear-gradient(90deg, ${promo.from} 0%, ${promo.from}00 45%)` }} aria-hidden="true" />
+            </>
+          )
+      )}
+
+      <div className="absolute inset-y-0 left-0 w-[68%] sm:w-[62%] flex flex-col justify-center p-5 sm:p-8 lg:p-10">
+        {promo.tag && (
+          <span className="absolute top-0 left-5 sm:left-8 lg:left-10 rounded-b-lg bg-[#111827] text-white text-[11px] sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 max-w-[85%]">{promo.tag}</span>
+        )}
+        <h3 className="mt-6 text-lg sm:text-3xl font-semibold leading-tight text-white">{promo.title}</h3>
+        {promo.highlight && <p className="mt-1 text-xl sm:text-4xl lg:text-[44px] font-bold leading-tight text-[#FDB44B]">{promo.highlight}</p>}
+        <span className="mt-5 sm:mt-8 inline-flex items-center h-10 sm:h-12 px-5 sm:px-6 rounded-xl bg-white text-[#111827] text-sm sm:text-lg font-semibold w-fit shadow">{promo.cta || 'Book now'}</span>
+      </div>
+    </>
+  );
+  return to.startsWith('#')
+    ? <a href={to} className={cls} style={style}>{body}</a>
+    : <Link to={to} className={cls} style={style}>{body}</Link>;
+};
+
+const PromoCarousel = ({ groups }) => {
+  const rowRef = useRef(null);
+  const [active, setActive] = useState(0);
+
+  const slides = PROMOS.map((promo) => {
+    const group = groups.find((g) => promo.match.test(g.category.name));
+    if (!group && !promo.always) return null;
+    const to = group ? `/category/${group.category.slug}` : '#categories';
+    const image = promo.image || group?.services.find((x) => x.images?.[0]?.url)?.images[0].url || '';
+    return { promo, to, image };
+  }).filter(Boolean);
+
+  if (!slides.length) return null;
+
+  const onScroll = () => {
+    const el = rowRef.current;
+    if (el) setActive(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const goTo = (i) => {
+    const el = rowRef.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+  };
+  const multi = slides.length > 1;
+
+  return (
+    <section aria-label="Offers" className="py-6 md:py-10 bg-white">
+      <div className={WRAP}>
+        <div className="relative">
+          <ul
+            ref={rowRef}
+            onScroll={onScroll}
+            className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory rounded-2xl"
+          >
+            {slides.map(({ promo, to, image }, i) => (
+              <li key={promo.id} className="snap-start shrink-0 w-full" aria-label={`Offer ${i + 1} of ${slides.length}`}>
+                <PromoSlide promo={promo} to={to} image={image} />
+              </li>
+            ))}
+          </ul>
+
+          {multi && active > 0 && (
+            <button type="button" onClick={() => goTo(active - 1)} aria-label="Previous offer"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white/95 text-[#111827] shadow-md hover:bg-white ${FOCUS}`}>
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          {multi && active < slides.length - 1 && (
+            <button type="button" onClick={() => goTo(active + 1)} aria-label="Next offer"
+              className={`absolute right-3 top-1/2 -translate-y-1/2 hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white/95 text-[#111827] shadow-md hover:bg-white ${FOCUS}`}>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {multi && (
+          <div className="mt-3 flex items-center justify-center gap-2" role="tablist" aria-label="Choose offer">
+            {slides.map(({ promo }, i) => (
+              <button
+                key={promo.id}
+                type="button"
+                role="tab"
+                aria-selected={i === active}
+                aria-label={`Go to offer ${i + 1}`}
+                onClick={() => goTo(i)}
+                className={`h-2 rounded-full transition-all ${i === active ? 'w-6 bg-[#111827]' : 'w-2 bg-[#D1D5DB]'} ${FOCUS}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+/* ---------- Home page order (below "Most booked services") ----------
+   Only these blocks show on Home, in this order. Other categories stay reachable from the
+   categories grid and each section's "See all" link. Edit / reorder freely. */
+const HOME_LAYOUT = [
+  { type: 'category', match: /clean/i },
+  { type: 'promo' },
+  { type: 'category', match: /(^|\W)ac\b|air.?cond/i },
+  { type: 'category', match: /paint|renovat/i },
+];
 
 /* ---------- Why Choose data ---------- */
 const WHY = [
@@ -541,15 +920,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trending (featured services) */}
-      {featuredServices.length > 0 && (
-        <ServiceRowSection id="featured-title" title="Trending now" services={featuredServices} variant="trending" />
-      )}
+      {/* In the spotlight */}
+      <SpotlightSection categories={categories} services={servicesByCategory.flatMap((g) => g.services)} />
+
+      {/* Trending (featured services) - hidden for now
+      <TrendingSection services={featuredServices} id="featured-title" />
+      */}
 
       {/* Most booked (popular services) */}
-      {popularServices.length > 0 && (
-        <ServiceRowSection id="popular-title" title="Most booked services" services={popularServices} />
-      )}
+      <MostBookedSection services={popularServices} id="popular-title" />
+
+      {/* Cleaning, promo banner, AC, Painting (see HOME_LAYOUT) */}
+      {HOME_LAYOUT.map((blk, i) => {
+        if (blk.type === 'promo') return <PromoCarousel key={`promo-${i}`} groups={servicesByCategory} />;
+        const group = servicesByCategory.find((g) => blk.match.test(g.category.name));
+        return group ? <CategoryRowSection key={group.category._id} category={group.category} services={group.services} /> : null;
+      })}
 
       {/* App banner: only shown when real store links are set above */}
       {hasAppLink && (
@@ -566,26 +952,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {/* Category-wise Service Sections */}
-      {servicesByCategory.map(({ category, services }, i) => (
-        <ServiceRowSection
-          key={category._id}
-          id={`cat-title-${category._id}`}
-          title={category.name}
-          services={services}
-          tint={i % 2 === 0}
-          action={
-            <Link
-              to={`/category/${category.slug}`}
-              aria-label={`View all ${category.name} services`}
-              className={`shrink-0 inline-flex items-center gap-0.5 h-11 px-3 -mr-3 rounded-lg text-[#0E7C86] hover:bg-[#F0F6F7] font-semibold text-sm md:text-base transition-colors ${FOCUS}`}
-            >
-              View All <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            </Link>
-          }
-        />
-      ))}
 
       {/* Why choose Puchhuu */}
       <section aria-labelledby="why-title" className="py-9 md:py-14 bg-white">
@@ -676,7 +1042,7 @@ export default function Home() {
 
       {/* Professionals & Reviews */}
       <InfiniteProvidersMarquee />
-      <InfiniteReviewsMarquee />
+      {/* <InfiniteReviewsMarquee /> */}
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }

@@ -2,6 +2,74 @@
 import React, { useState, useEffect } from 'react';
 import { fetchCategories, fetchServices } from '../services/api';
 
+/* ---------- Partners (edit here) ----------
+   logo: paste your logo image URL (PNG/SVG/WebP). Leave '' to show the small icon instead.
+   href: link for the card. Leave '' for a card that is not clickable. */
+const PARTNERS = [
+  {
+    name: 'AurixAI Software',
+    role: 'Technology & Growth Partner',
+    logo: 'https://res.cloudinary.com/djtvxmttf/image/upload/v1793099465/a8bc850f-0fec-44f2-a422-37d10d4d0ff4.png',
+    href: 'https://aurixaisoftware.com',
+    icon: 'code',
+  },
+  {
+    name: 'Aurix Branding & Marketing',
+    role: 'Press, Media & Marketing Partner',
+    logo: '', // e.g. 'https://res.cloudinary.com/.../aurix-branding-logo.png'
+    href: '',
+    icon: 'megaphone',
+  },
+];
+
+const PartnerIcon = ({ type }) => {
+  if (type === 'megaphone') {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="m3 11 18-5v12L3 14v-3z" />
+        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0E8F6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 7l-5 5 5 5" />
+      <path d="M16 7l5 5-5 5" />
+      <path d="M14 5l-4 14" />
+    </svg>
+  );
+};
+
+const PartnerCard = ({ partner }) => {
+  const inner = (
+    <>
+      <span className={`shrink-0 grid place-items-center ${partner.logo ? 'w-24 h-16 sm:w-28 sm:h-20 md:w-36 md:h-24' : 'w-11 h-11'}`}>
+        {partner.logo
+          ? <img src={partner.logo} alt="" loading="lazy" decoding="async" className="max-w-full max-h-full object-contain" />
+          : <PartnerIcon type={partner.icon} />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[17px] md:text-lg font-medium text-gray-900 leading-snug">{partner.name}</span>
+        <span className="block mt-0.5 text-sm text-slate-500">{partner.role}</span>
+      </span>
+    </>
+  );
+  const cls = 'flex items-center gap-4 rounded-xl bg-[#F7F8FC] px-4 py-4 md:px-5';
+  return partner.href ? (
+    <a
+      href={partner.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${partner.name}, ${partner.role}`}
+      className={`${cls} hover:bg-[#EFF1F9] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2`}
+    >
+      {inner}
+    </a>
+  ) : (
+    <div className={cls}>{inner}</div>
+  );
+};
+
 const Footer = () => {
   // ---- BACKEND / DATA LOGIC (unchanged) ----
   const [categories, setCategories] = useState([]);
@@ -188,12 +256,20 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* COPYRIGHT */}
-        <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400">
-            Puchhuu © {new Date().getFullYear()}. All rights reserved.
-          </p>
+        {/* TECHNOLOGY & GROWTH PARTNERS */}
+        <div className="mt-10 pt-8 border-t border-gray-100">
+          <h5 className="mb-3 text-xs md:text-[13px] font-medium uppercase tracking-wide text-slate-500">
+            Our Technology &amp; Growth Partners
+          </h5>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {PARTNERS.map((p) => <PartnerCard key={p.name} partner={p} />)}
+          </div>
         </div>
+
+        {/* COPYRIGHT */}
+        <p className="mt-8 text-sm text-gray-500 text-center sm:text-left">
+          Puchhuu © {new Date().getFullYear()}. All rights reserved.
+        </p>
       </div>
     </footer>
   );

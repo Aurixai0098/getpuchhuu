@@ -1,6 +1,5 @@
 // src/components/Navbar.jsx
 import { Link, useLocation } from 'react-router-dom';
-import { Droplets, Home as HomeIcon, Wind, Sparkles, Wrench, Zap, PaintRoller, CarFront, Flower2, Bug, Hammer, Sofa, Scissors, Grid2x2, MoreHorizontal } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -41,24 +40,6 @@ const ICON_BTN = `relative inline-flex items-center justify-center w-10 h-10 rou
 const MENU_ITEM = `flex items-center gap-3 px-4 py-2.5 text-sm text-[#2B3A4F] hover:bg-[#F0F6F7] hover:text-[#0B2545] transition-colors ${FOCUS}`;
 const DRAWER_ITEM = `w-full flex items-center gap-3 px-3 py-3 text-[#2B3A4F] hover:bg-[#F0F6F7] hover:text-[#0B2545] rounded-lg transition-colors font-medium text-left min-h-[44px] ${FOCUS}`;
 
-
-/* ---------- UI-only: category icon fallback, offers icon ---------- */
-const ICON_RULES = [
-  [/(^|\W)(ac|appliance|refrigerator|washing|ro)\b/i, Wind],
-  [/clean|wash|sanit/i, Sparkles],
-  [/plumb/i, Droplets],
-  [/electric/i, Zap],
-  [/paint|renovat/i, PaintRoller],
-  [/car|bike|vehicle/i, CarFront],
-  [/garden|outdoor|lawn/i, Flower2],
-  [/pest/i, Bug],
-  [/carpent|furnit/i, Hammer],
-  [/sofa|mattress|curtain/i, Sofa],
-  [/salon|beauty|spa/i, Scissors],
-  [/repair|service|maint/i, Wrench],
-];
-const iconForCategory = (name = '') => (ICON_RULES.find(([re]) => re.test(name)) || [null, Grid2x2])[1];
-
 const OffersIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
     <path d="M12 2l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V5l8-3z" fill="#E11D2E" />
@@ -73,8 +54,8 @@ const Navbar = () => {
   const { cartCount } = useCart();
   const [authPanel, setAuthPanel] = useState('signin');
 
+  // Categories + services are still loaded: they power the search results and the rotating placeholder.
   const [categories, setCategories] = useState([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [allServices, setAllServices] = useState([]); // for rotating placeholder
 
   // Rotating placeholder state
@@ -112,18 +93,16 @@ const Navbar = () => {
   const [isMobileView, setIsMobileView] = useState(window.innerWidth < 1024);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // UI-only: "More" categories panel + active link highlight
+  // UI-only: active tab highlight for the mobile bottom bar
   const { pathname } = useLocation();
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef(null);
+  // Customer bottom tabs are hidden on provider / admin screens
+  const showBottomNav = isMobileView && !/^\/(admin|provider)(\/|$)/.test(pathname);
+
+  // Keep page content clear of the fixed bottom bar
   useEffect(() => {
-    if (!moreOpen) return undefined;
-    const onDown = (e) => { if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false); };
-    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false); };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
-  }, [moreOpen]);
+    document.body.classList.toggle('has-bottom-nav', showBottomNav);
+    return () => document.body.classList.remove('has-bottom-nav');
+  }, [showBottomNav]);
 
   const openAuthModal = (panel) => {
     setAuthPanel(panel);
@@ -135,10 +114,9 @@ const Navbar = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Load categories + services (for rotating placeholder)
+  // Load categories + services (for search + rotating placeholder)
   useEffect(() => {
     const loadData = async () => {
-      setCategoriesLoading(true);
       try {
         const [catRes, servicesRes] = await Promise.all([
           fetchCategories(),
@@ -152,8 +130,6 @@ const Navbar = () => {
         }
       } catch (err) {
         console.error('Failed to load data for navbar:', err);
-      } finally {
-        setCategoriesLoading(false);
       }
     };
     loadData();
@@ -492,6 +468,37 @@ const Navbar = () => {
     </div>
   );
 
+  /* ---------- Mobile bottom tab bar (Home, Bookings, Profile, Cart) ---------- */
+  const bottomTabs = [
+    { key: 'home', label: 'Home', d: P.home, to: '/', active: pathname === '/', needsLogin: false },
+    { key: 'bookings', label: 'Bookings', d: P.calendar, to: '/my-bookings', active: pathname.startsWith('/my-bookings'), needsLogin: true },
+    { key: 'profile', label: 'Profile', d: P.user, to: '/profile', active: pathname.startsWith('/profile'), needsLogin: true },
+    { key: 'cart', label: 'Cart', d: P.cart, to: '/cart', active: pathname.startsWith('/cart'), needsLogin: false, badge: cartCount },
+  ];
+
+  const renderBottomTab = (t) => {
+    const cls = `relative flex flex-col items-center justify-center gap-1 w-full h-16 text-[11px] font-medium transition-colors ${t.active ? 'text-[#0E7C86]' : 'text-[#6B7A8D] hover:text-[#0B2545]'} ${FOCUS}`;
+    const inner = (
+      <>
+        <span className={`absolute top-0 h-[3px] w-8 rounded-b-full bg-[#0E7C86] transition-opacity ${t.active ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
+        <span className="relative">
+          <Icon d={t.d} className="w-6 h-6" sw={t.active ? 2.2 : 1.8} />
+          {t.badge > 0 && (
+            <span className="absolute -top-1.5 -right-2.5 bg-[#0E7C86] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center ring-2 ring-white">
+              {t.badge > 9 ? '9+' : t.badge}
+            </span>
+          )}
+        </span>
+        <span>{t.label}</span>
+      </>
+    );
+    return t.needsLogin && !user ? (
+      <button type="button" onClick={() => openAuthModal('signin')} className={cls}>{inner}</button>
+    ) : (
+      <Link to={t.to} aria-current={t.active ? 'page' : undefined} className={cls}>{inner}</Link>
+    );
+  };
+
   return (
     <>
       <nav
@@ -618,7 +625,7 @@ const Navbar = () => {
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => openAuthModal('signin')} className={`h-11 px-6 rounded-xl bg-[#12414B] hover:bg-[#0B2F37] text-white text-sm font-semibold transition-colors shadow-sm ${FOCUS}`}>Login / Sign Up</button>
+                  <button onClick={() => openAuthModal('signin')} className={`h-11 px-6 rounded-xl bg-[#0E7C86] hover:bg-[#0B6A73] text-white text-sm font-semibold transition-colors shadow-sm ${FOCUS}`}>Login / Sign Up</button>
                 )}
                 </div>
               </div>
@@ -628,49 +635,51 @@ const Navbar = () => {
           {/* ========== MOBILE VIEW ========== */}
           {isMobileView && (
             <div className="flex flex-col gap-2">
-              {/* Top Bar: Logo | Search, Location, Notification, Avatar/Hamburger */}
-              <div className="flex items-center justify-between gap-2">
-                <Link to="/" className={`flex shrink-0 items-center no-underline rounded-lg min-w-0 ${FOCUS}`} onClick={handleLogoRotate}>
+              {/* Top Bar: Logo + location text on the left; search + notification on the right corner */}
+              <div className="flex items-center gap-2">
+                <Link to="/" className={`flex shrink-0 items-center no-underline rounded-lg ${FOCUS}`} onClick={handleLogoRotate}>
                   <img
                     src="https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png"
                     alt="puchhuu logo"
-                    className="h-10 sm:h-12 w-auto max-w-[40vw] object-contain"
+                    className="h-9 sm:h-11 w-auto max-w-[28vw] object-contain"
                   />
                 </Link>
 
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                  {/* Search Icon */}
+                {/* Current location (text), tap to change */}
+                <button
+                  type="button"
+                  onClick={() => setShowLocationPopup(true)}
+                  aria-label={`Location: ${location || 'not set'}. Tap to change`}
+                  className={`flex items-center gap-1 min-w-0 max-w-[48vw] sm:max-w-[320px] h-10 pl-2 pr-2.5 rounded-xl border border-[#E3E8EC] bg-white hover:border-[#0E7C86]/50 transition-colors ${FOCUS}`}
+                >
+                  <Icon d={P.pin} className="w-4 h-4 text-[#0E7C86] shrink-0" />
+                  <span className="text-[13px] font-semibold text-[#0B2545] truncate">{location || 'Select location'}</span>
+                  <Icon d={P.chevDown} className="w-3.5 h-3.5 text-[#0B2545] shrink-0" sw={2.4} />
+                </button>
+
+                <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  {/* Search */}
                   <button onClick={() => setMobileSearchOpen(!mobileSearchOpen)} aria-label="Search" aria-expanded={mobileSearchOpen} className={ICON_BTN}>
                     <Icon d={P.search} />
                   </button>
 
-                  {/* Location Icon */}
-                  <button onClick={() => setShowLocationPopup(true)} aria-label="Select location" className={ICON_BTN}>
-                    <Icon d={P.pin} className="w-5 h-5 text-[#0E7C86]" />
-                  </button>
-
-                  {/* Notification Bell (only when logged in) */}
+                  {/* Notification Bell (appears automatically after login) */}
                   {user && <NotificationBell />}
-                  {!user && <div className="w-9 h-9" /> /* placeholder to keep layout stable */}
 
-                  {/* Menu button – Avatar when logged in, Hamburger when logged out */}
-                  <button
-                    onClick={() => setMobileMenuOpen(true)}
-                    aria-label="Open menu"
-                    className={`flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden bg-[#0B2545] shadow-sm active:scale-95 transition-all ${FOCUS}`}
-                  >
-                    {user ? (
-                      user.avatar?.url ? (
+                  {/* Menu is not shown for customers; only provider / admin keep it for their dashboard links */}
+                  {user && (user.role === 'provider' || user.role === 'admin') && (
+                    <button
+                      onClick={() => setMobileMenuOpen(true)}
+                      aria-label="Open menu"
+                      className={`flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden bg-[#0B2545] shadow-sm active:scale-95 transition-all ${FOCUS}`}
+                    >
+                      {user.avatar?.url ? (
                         <img src={user.avatar.url} alt="avatar" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-white text-sm font-bold">
-                          {getInitials(user.name || user.email)}
-                        </span>
-                      )
-                    ) : (
-                      <Icon d={P.menu} className="w-5 h-5 text-white" sw={2} />
-                    )}
-                  </button>
+                        <span className="text-white text-sm font-bold">{getInitials(user.name || user.email)}</span>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -707,77 +716,21 @@ const Navbar = () => {
               )}
             </div>
           )}
-
-          {/* Categories Row (desktop) */}
-          {!isMobileView && (
-            <div className="border-t border-[#EEF1F4] flex items-center gap-6 xl:gap-8">
-              <Link to="/" aria-current={pathname === '/' ? 'page' : undefined} className={`relative shrink-0 flex items-center gap-2 h-12 text-[13.5px] whitespace-nowrap rounded-md transition-colors ${pathname === '/' ? 'text-[#0B2545] font-semibold' : 'text-[#3C4B5F] hover:text-[#0E7C86] font-medium'} ${FOCUS}`}>
-                <HomeIcon className="w-[18px] h-[18px]" aria-hidden="true" />Home
-                <span className={`absolute left-0 right-0 bottom-0 h-[3px] rounded-full bg-[#0E7C86] transition-transform duration-200 origin-left ${pathname === '/' ? 'scale-x-100' : 'scale-x-0'}`} />
-              </Link>
-              {categoriesLoading ? (
-                [...Array(6)].map((_, i) => <div key={i} className="h-4 w-24 bg-[#E8EDF1] rounded animate-pulse"></div>)
-              ) : (
-                categories.slice(0, 8).map((cat, i) => {
-                  const CatIcon = iconForCategory(cat.name);
-                  const active = pathname === `/category/${cat.slug}`;
-                  return (
-                    <Link key={cat._id} to={`/category/${cat.slug}`} aria-current={active ? 'page' : undefined} className={`${i >= 5 ? 'hidden xl:flex' : 'flex'} relative shrink-0 items-center gap-2 h-12 text-[13.5px] whitespace-nowrap rounded-md transition-colors ${active ? 'text-[#0B2545] font-semibold' : 'text-[#3C4B5F] hover:text-[#0E7C86] font-medium'} ${FOCUS}`}>
-                      {cat.icon?.url ? <img src={cat.icon.url} alt="" className="w-[18px] h-[18px] object-contain" /> : <CatIcon className="w-[18px] h-[18px]" aria-hidden="true" />}
-                      {cat.name}
-                      <span className={`absolute left-0 right-0 bottom-0 h-[3px] rounded-full bg-[#0E7C86] transition-transform duration-200 origin-left ${active ? 'scale-x-100' : 'scale-x-0'}`} />
-                    </Link>
-                  );
-                })
-              )}
-              {categories.length > 5 && (
-                <div ref={moreRef} className={`relative ml-auto pl-6 border-l border-[#EEF1F4] ${categories.length > 8 ? '' : 'xl:hidden'}`}>
-                  <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-haspopup="true" className={`flex items-center gap-2 h-12 text-[13.5px] font-medium text-[#3C4B5F] hover:text-[#0E7C86] rounded-md ${FOCUS}`}>
-                    <MoreHorizontal className="w-[18px] h-[18px]" aria-hidden="true" />More
-                  </button>
-                  {moreOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-[520px] max-w-[90vw] bg-white rounded-2xl border border-[#DDE3E8] shadow-[0_22px_50px_-16px_rgba(11,37,69,0.35)] p-3 z-50 animate-fadeIn">
-                      <ul className="grid grid-cols-2 gap-1 max-h-[60vh] overflow-y-auto">
-                        {categories.slice(5).map((cat, i) => {
-                          const CatIcon = iconForCategory(cat.name);
-                          return (
-                            <li key={cat._id} className={i < 3 ? 'xl:hidden' : ''}>
-                              <Link to={`/category/${cat.slug}`} onClick={() => setMoreOpen(false)} className={`flex items-center gap-3 px-3 h-12 rounded-xl text-sm text-[#2B3A4F] hover:bg-[#F0F6F7] hover:text-[#0B2545] ${FOCUS}`}>
-                                <span className="w-9 h-9 rounded-lg bg-[#F0F6F7] flex items-center justify-center shrink-0">
-                                  {cat.icon?.url ? <img src={cat.icon.url} alt="" className="w-5 h-5 object-contain" /> : <CatIcon className="w-[18px] h-[18px] text-[#0E7C86]" aria-hidden="true" />}
-                                </span>
-                                <span className="truncate">{cat.name}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Categories Row (mobile: unchanged chips) */}
-          {isMobileView && (
-          <div className="mt-2.5 pt-2.5 border-t border-[#EEF1F4] flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {categoriesLoading ? (
-              <div className="flex gap-2">{[...Array(6)].map((_, i) => <div key={i} className="h-8 w-24 bg-[#E8EDF1] rounded-lg animate-pulse"></div>)}</div>
-            ) : categories.length > 0 ? (
-              categories.map(cat => (
-                <Link key={cat._id} to={`/category/${cat.slug}`} className={`shrink-0 flex items-center gap-2 h-8 px-3.5 rounded-lg border border-[#DDE3E8] bg-white text-[#2B3A4F] hover:text-[#0B2545] hover:border-[#0E7C86]/60 hover:bg-[#F0F6F7] text-[13px] font-medium transition-colors whitespace-nowrap ${FOCUS}`}>
-                  {cat.icon?.url ? <img src={cat.icon.url} alt={cat.name} className="w-4 h-4 object-contain" /> : <Icon d={P.bolt} className="w-4 h-4 text-[#0E7C86]" />}
-                  {cat.name}
-                </Link>
-              ))
-            ) : (
-              <div className="text-sm text-[#8A97A8]">No categories available</div>
-            )}
-          </div>
-          )}
         </div>
       </nav>
+
+      {/* Mobile bottom tab bar (app-style): Home, Bookings, Profile, Cart */}
+      {showBottomNav && (
+        <nav
+          aria-label="Primary"
+          className="fixed bottom-0 inset-x-0 z-[990] bg-white/95 backdrop-blur-md border-t border-[#E3E8EC] shadow-[0_-8px_24px_-16px_rgba(11,37,69,0.3)]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <ul className="grid grid-cols-4">
+            {bottomTabs.map((t) => <li key={t.key}>{renderBottomTab(t)}</li>)}
+          </ul>
+        </nav>
+      )}
 
       {/* Location Popup Modal */}
       {showLocationPopup && (
@@ -813,7 +766,7 @@ const Navbar = () => {
 
       {/* Success Toast */}
       {successMessage && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[1300] animate-slideUp max-w-[92vw]">
+        <div className={`fixed ${showBottomNav ? 'bottom-24' : 'bottom-20'} left-1/2 transform -translate-x-1/2 z-[1300] animate-slideUp max-w-[92vw]`}>
           <div className="bg-[#0B2545] text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2"><Icon d={P.check} className="w-5 h-5 text-[#5CD6D0]" sw={2.2} /><span className="text-sm font-medium">{successMessage}</span></div>
         </div>
       )}
@@ -865,12 +818,6 @@ const Navbar = () => {
                   </span>
                 )}
               </Link>
-              {/* <Link to="/services" className="flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium" onClick={() => setMobileMenuOpen(false)}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>All Services
-              </Link>
-              <Link to="/providers" className="flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-medium" onClick={() => setMobileMenuOpen(false)}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>Providers
-              </Link> */}
             </div>
           </div>
           {user && (
@@ -926,8 +873,7 @@ const Navbar = () => {
       {showAuth && <Login initialPanel={authPanel} />}
 
       <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .has-bottom-nav { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

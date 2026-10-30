@@ -7,6 +7,7 @@ import {
   Lock,
   User,
   Phone,
+  Smartphone,
   Eye,
   EyeOff,
   ArrowRight,
@@ -32,10 +33,22 @@ import { apiFetch } from "../../services/api";
 // Left panel me aurat wali photo (transparent PNG best). Khali = sirf gradient + wave dikhega.
 const LOGIN_HERO_IMG = ''; // e.g. 'https://res.cloudinary.com/.../hero-woman.png'
 
-// "or continue with" + Google button. Jab Google login (GoogleOAuthProvider) ready ho tab true karo.
-const SHOW_SOCIAL_LOGIN = false;
+// "or continue with" + "Continue with Google" button.
+// Google button ke liye app ko <GoogleOAuthProvider clientId="..."> me wrap karna zaruri hai (main.jsx).
+// Provider na ho to neeche ka fallback button dikhega (click par "not set up yet" message).
+const SHOW_SOCIAL_LOGIN = true;
+// "Continue with Mobile Number" button (OTP flow).
+const SHOW_MOBILE_LOGIN = true;
 // Apple button abhi UI-only hai (click par "coming soon" message). Chahiye to true karo.
 const SHOW_APPLE_BUTTON = false;
+
+// Mobile OTP ke liye backend endpoints. Khali = button/flow dikhega par "coming soon" message aayega.
+// Jab backend ready ho, yahan paths daalo (jaise '/auth/send-otp' aur '/auth/verify-otp').
+// Request body: send -> { phone }, verify -> { phone, otp }. Response: { success, data: { user } }
+// (agar aapke backend ke field naam alag hain to handleSendOtp / handleVerifyOtp me badal do).
+const MOBILE_LOGIN_API = { send: '', verify: '' };
+const OTP_LENGTH = 6;
+const OTP_RESEND_SECONDS = 30;
 
 const LOGO_URL = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png";
 const MOBILE_LOGO_URL = "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058119/ccb32c09-3568-477a-b5c3-11edba5176a0.png";
@@ -57,9 +70,36 @@ const SERVICE_STRIP = [
 ];
 
 const INPUT_BASE =
-  "w-full h-12 border rounded-xl outline-none transition-all text-base focus:ring-2 focus:ring-[#0E7C86]/30 focus:border-[#0E7C86]";
+  "w-full h-12 border rounded-xl outline-none transition-all text-base focus:ring-2 focus:ring-[#0E7C86]/30 focus:border-[#0E7C86] disabled:bg-gray-100 disabled:text-gray-500";
 const inputState = (error) =>
   error ? "border-red-500 bg-red-50" : "border-gray-200 bg-white";
+
+const SOCIAL_BTN =
+  "w-full h-12 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 text-sm font-medium text-gray-800 bg-white hover:bg-gray-50 transition-colors";
+
+// Agar GoogleOAuthProvider set nahi hai to GoogleLogin error deta hai. Ye boundary page ko crash hone se bachata hai.
+class GoogleBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {}
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+const GoogleG = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+    <path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z" />
+    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+  </svg>
+);
 
 const PasswordInput = ({ value, onChange, placeholder, show, toggleShow, error }) => (
   <div>
@@ -122,6 +162,13 @@ const Login = ({ initialPanel = "signin" }) => {
   const [emailLogin, setEmailLogin] = useState("");
   const [passwordLogin, setPasswordLogin] = useState("");
 
+  // Mobile number (OTP) login
+  const [mobileMode, setMobileMode] = useState(false);
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
   // Password visibility
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -149,7 +196,13 @@ const Login = ({ initialPanel = "signin" }) => {
 
   useEffect(() => {
     setFieldErrors({});
-  }, [firstName, lastName, emailReg, phone, passwordReg, confirmPassword, emailLogin, passwordLogin, activePanel]);
+  }, [firstName, lastName, emailReg, phone, passwordReg, confirmPassword, emailLogin, passwordLogin, mobileNumber, otp, activePanel]);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
   useEffect(() => {
     if (!passwordReg) {
@@ -278,10 +331,88 @@ const Login = ({ initialPanel = "signin" }) => {
     }
   };
 
+  const resetMobileFlow = () => {
+    setMobileMode(false);
+    setMobileNumber("");
+    setOtp("");
+    setOtpSent(false);
+    setResendIn(0);
+  };
+
   const togglePanel = (panel) => {
     setActivePanel(panel);
     setGeneralError("");
     setFieldErrors({});
+    resetMobileFlow();
+  };
+
+  const openMobileLogin = () => {
+    setActivePanel("signin");
+    setGeneralError("");
+    setFieldErrors({});
+    setMobileMode(true);
+  };
+
+  // ---------- Mobile number (OTP) login ----------
+  const handleSendOtp = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+      setFieldErrors({ mobile: "Enter a valid 10-digit Indian mobile number" });
+      return;
+    }
+    if (!MOBILE_LOGIN_API.send) {
+      setGeneralError("Mobile number login is coming soon.");
+      return;
+    }
+    setLoading(true);
+    setGeneralError("");
+    try {
+      const res = await apiFetch(MOBILE_LOGIN_API.send, {
+        method: 'POST',
+        body: JSON.stringify({ phone: mobileNumber })
+      });
+      if (res.success) {
+        setOtpSent(true);
+        setOtp("");
+        setResendIn(OTP_RESEND_SECONDS);
+      } else {
+        setGeneralError(res.message || "Could not send OTP. Please try again.");
+      }
+    } catch (err) {
+      setGeneralError(err.data?.message || err.message || "Could not send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (otp.length !== OTP_LENGTH) {
+      setFieldErrors({ otp: `Enter the ${OTP_LENGTH}-digit OTP` });
+      return;
+    }
+    if (!MOBILE_LOGIN_API.verify) {
+      setGeneralError("Mobile number login is coming soon.");
+      return;
+    }
+    setLoading(true);
+    setGeneralError("");
+    try {
+      const res = await apiFetch(MOBILE_LOGIN_API.verify, {
+        method: 'POST',
+        body: JSON.stringify({ phone: mobileNumber, otp })
+      });
+      if (res.success) {
+        if (res.data && res.data.user) setUser(res.data.user);
+        setShowAuth(false);
+      } else {
+        setGeneralError(res.message || "Invalid OTP. Please try again.");
+      }
+    } catch (err) {
+      setGeneralError(err.data?.message || err.message || "Invalid OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ✅ Handle Google login using the built-in component
@@ -320,7 +451,17 @@ const Login = ({ initialPanel = "signin" }) => {
     "w-full h-12 bg-gradient-to-r from-[#0E7C86] to-[#12948F] hover:from-[#0B6A73] hover:to-[#0E7C86] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm";
 
   const renderSocial = (googleText) => {
-    if (!SHOW_SOCIAL_LOGIN) return null;
+    if (!SHOW_SOCIAL_LOGIN && !SHOW_MOBILE_LOGIN) return null;
+    const googleLabel = googleText === "signup_with" ? "Sign up with Google" : "Continue with Google";
+    const googleFallback = (
+      <button
+        type="button"
+        onClick={() => setGeneralError("Google login is not set up yet.")}
+        className={SOCIAL_BTN}
+      >
+        <GoogleG /> {googleLabel}
+      </button>
+    );
     return (
       <div className="pt-1">
         <div className="relative my-4">
@@ -328,26 +469,36 @@ const Login = ({ initialPanel = "signin" }) => {
           <div className="relative flex justify-center text-xs"><span className="px-3 bg-white text-gray-400">or continue with</span></div>
         </div>
         <div className={`space-y-3 ${googleLoading ? 'opacity-60 pointer-events-none' : ''}`}>
-          <div className="flex justify-center rounded-xl border border-gray-200 py-1.5 overflow-hidden">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              useOneTap={false}
-              theme="outline"
-              size="large"
-              text={googleText}
-              shape="rectangular"
-              width="100%"
-            />
-          </div>
+          {SHOW_SOCIAL_LOGIN && (
+            <GoogleBoundary fallback={googleFallback}>
+              <div className="flex justify-center rounded-xl border border-gray-200 py-1.5 overflow-hidden">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  useOneTap={false}
+                  theme="outline"
+                  size="large"
+                  text={googleText}
+                  shape="rectangular"
+                  width="100%"
+                />
+              </div>
+            </GoogleBoundary>
+          )}
+          {SHOW_MOBILE_LOGIN && (
+            <button type="button" onClick={openMobileLogin} className={SOCIAL_BTN}>
+              <Smartphone size={18} className="text-[#0E7C86]" aria-hidden="true" />
+              Continue with Mobile Number
+            </button>
+          )}
           {SHOW_APPLE_BUTTON && (
             <button
               type="button"
               onClick={() => setGeneralError("Apple login is coming soon.")}
-              className="w-full h-12 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors"
+              className={SOCIAL_BTN}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M16.4 12.7c0-2.4 2-3.5 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.2-1.2 3-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.5-1-2.5-3.9zM14 5.6c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z" />
+                <path d="M16.4 12.7c0-2.4 2-3.5 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.200-1.200 3-2.300.9-1.300 1.300-2.600 1.300-2.700-.1 0-2.500-1-2.500-3.900zM14 5.600c.7-.8 1.100-1.900 1-3-1 0-2.100.6-2.800 1.400-.6.700-1.200 1.800-1 2.900 1.100.1 2.100-.5 2.800-1.300z" />
               </svg>
               Continue with Apple
             </button>
@@ -484,57 +635,126 @@ const Login = ({ initialPanel = "signin" }) => {
               )}
 
               {isSignin ? (
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="text-center mb-2">
-                    <h2 className="text-2xl font-bold text-[#0B1B33]">Welcome Back</h2>
-                    <p className="text-sm text-gray-500 mt-1">Login to your Puchhuu account</p>
-                  </div>
+                mobileMode ? (
+                  <form onSubmit={otpSent ? handleVerifyOtp : handleSendOtp} className="space-y-4">
+                    <div className="text-center mb-2">
+                      <h2 className="text-2xl font-bold text-[#0B1B33]">Continue with Mobile</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {otpSent ? `Enter the OTP sent to +91 ${mobileNumber}` : "We'll send an OTP to verify your number"}
+                      </p>
+                    </div>
 
-                  <InputField
-                    icon={Mail}
-                    type="email"
-                    placeholder="Enter email address"
-                    value={emailLogin}
-                    onChange={(e) => setEmailLogin(e.target.value)}
-                    error={fieldErrors.emailLogin}
-                  />
-                  <PasswordInput
-                    value={passwordLogin}
-                    onChange={(e) => setPasswordLogin(e.target.value)}
-                    placeholder="Enter password"
-                    show={showLoginPassword}
-                    toggleShow={() => setShowLoginPassword(!showLoginPassword)}
-                    error={fieldErrors.passwordLogin}
-                  />
+                    <InputField
+                      icon={Phone}
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel-national"
+                      prefix="+91"
+                      placeholder="Mobile number"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      error={fieldErrors.mobile}
+                      disabled={otpSent}
+                    />
 
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={keepSignedIn}
-                        onChange={(e) => setKeepSignedIn(e.target.checked)}
-                        className="w-4 h-4 rounded accent-[#0E7C86]"
-                        style={{ fontSize: '16px' }}
-                      />
-                      Keep me signed in
-                    </label>
-                    <button type="button" className="text-xs font-medium text-[#0E7C86] hover:underline">Forgot Password?</button>
-                  </div>
+                    {otpSent && (
+                      <>
+                        <InputField
+                          icon={ShieldCheck}
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          placeholder={`Enter ${OTP_LENGTH}-digit OTP`}
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH))}
+                          error={fieldErrors.otp}
+                        />
+                        <div className="flex items-center justify-between text-xs">
+                          <button
+                            type="button"
+                            onClick={() => { setOtpSent(false); setOtp(""); setResendIn(0); }}
+                            className="font-medium text-[#0E7C86] hover:underline"
+                          >
+                            Change number
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSendOtp}
+                            disabled={resendIn > 0 || loading}
+                            className="font-medium text-[#0E7C86] hover:underline disabled:text-gray-400 disabled:no-underline"
+                          >
+                            {resendIn > 0 ? `Resend OTP in ${resendIn}s` : "Resend OTP"}
+                          </button>
+                        </div>
+                      </>
+                    )}
 
-                  <button type="submit" disabled={loading} className={submitBtnCls}>
-                    {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Login"}
-                    {!loading && <ArrowRight size={16} />}
-                  </button>
-
-                  {renderSocial("continue_with")}
-
-                  <p className="text-center text-sm text-gray-500 pt-1">
-                    New to Puchhuu?{" "}
-                    <button type="button" onClick={() => togglePanel("signup")} className="font-semibold text-[#0E7C86] hover:underline">
-                      Create an Account
+                    <button type="submit" disabled={loading} className={submitBtnCls}>
+                      {loading
+                        ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : (otpSent ? "Verify & Continue" : "Send OTP")}
+                      {!loading && <ArrowRight size={16} />}
                     </button>
-                  </p>
-                </form>
+
+                    <p className="text-center text-sm text-gray-500 pt-1">
+                      <button type="button" onClick={resetMobileFlow} className="font-semibold text-[#0E7C86] hover:underline inline-flex items-center gap-1">
+                        <ArrowLeft size={14} /> Back to login options
+                      </button>
+                    </p>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="text-center mb-2">
+                      <h2 className="text-2xl font-bold text-[#0B1B33]">Welcome Back</h2>
+                      <p className="text-sm text-gray-500 mt-1">Login to your Puchhuu account</p>
+                    </div>
+
+                    <InputField
+                      icon={Mail}
+                      type="email"
+                      placeholder="Enter email address"
+                      value={emailLogin}
+                      onChange={(e) => setEmailLogin(e.target.value)}
+                      error={fieldErrors.emailLogin}
+                    />
+                    <PasswordInput
+                      value={passwordLogin}
+                      onChange={(e) => setPasswordLogin(e.target.value)}
+                      placeholder="Enter password"
+                      show={showLoginPassword}
+                      toggleShow={() => setShowLoginPassword(!showLoginPassword)}
+                      error={fieldErrors.passwordLogin}
+                    />
+
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={keepSignedIn}
+                          onChange={(e) => setKeepSignedIn(e.target.checked)}
+                          className="w-4 h-4 rounded accent-[#0E7C86]"
+                          style={{ fontSize: '16px' }}
+                        />
+                        Keep me signed in
+                      </label>
+                      <button type="button" className="text-xs font-medium text-[#0E7C86] hover:underline">Forgot Password?</button>
+                    </div>
+
+                    <button type="submit" disabled={loading} className={submitBtnCls}>
+                      {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Login"}
+                      {!loading && <ArrowRight size={16} />}
+                    </button>
+
+                    {renderSocial("continue_with")}
+
+                    <p className="text-center text-sm text-gray-500 pt-1">
+                      New to Puchhuu?{" "}
+                      <button type="button" onClick={() => togglePanel("signup")} className="font-semibold text-[#0E7C86] hover:underline">
+                        Create an Account
+                      </button>
+                    </p>
+                  </form>
+                )
               ) : (
                 <form onSubmit={handleRegister} className="space-y-3">
                   <div className="text-center mb-1">

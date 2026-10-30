@@ -45,6 +45,8 @@ import {
   Crown,
   BadgeCheck,
   ArrowRight,
+  ArrowLeft,
+  UserPlus,
   Tag,
   Zap,
   Percent,
@@ -55,8 +57,9 @@ import {
 ------------------------------------------------------------------ */
 
 // Sidebar / banner ke links. Apne project ke asli routes ke hisaab se badal lena.
+// (bookings: Navbar me '/my-bookings' use hota hai, isliye wahi rakha hai)
 const ROUTES = {
-  bookings: '/bookings',
+  bookings: '/my-bookings',
   favourites: '/favourites',
   refer: '/refer',
   help: '/help',
@@ -71,6 +74,27 @@ const INPUT =
 const CARD = 'bg-white rounded-2xl border border-[#E8EDF1] shadow-sm';
 const PRIMARY_BTN =
   'inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl bg-gradient-to-r from-[#0E7C86] to-[#12948F] hover:from-[#0B6A73] hover:to-[#0E7C86] text-white text-sm font-semibold transition-all disabled:opacity-50 shadow-sm';
+
+// Mobile "My Profile" menu list (tab = andar ka screen khulta hai, to = page par jata hai)
+const MOBILE_MENU = [
+  { label: 'Personal Information', Icon: User, tab: 'profile' },
+  { label: 'My Bookings', Icon: CalendarDays, to: ROUTES.bookings },
+  { label: 'My Addresses', Icon: MapPin, tab: 'addresses' },
+  { label: 'Payment Methods', Icon: CreditCard, tab: 'payments' },
+  { label: 'Saved & Favourites', Icon: Heart, to: ROUTES.favourites },
+  { label: 'Notifications', Icon: Bell, tab: 'notifications' },
+  { label: 'Refer & Earn', Icon: UserPlus, to: ROUTES.refer },
+  { label: 'Help & Support', Icon: HelpCircle, to: ROUTES.help },
+  { label: 'Settings', Icon: Settings, tab: 'security' },
+];
+
+const DETAIL_TITLES = {
+  profile: 'Personal Information',
+  addresses: 'My Addresses',
+  payments: 'Payment Methods',
+  notifications: 'Notifications',
+  security: 'Settings',
+};
 
 /* ------------------------------------------------------------------
    Small UI pieces (component ke bahar, taaki typing me focus na jaye)
@@ -148,6 +172,9 @@ const Profile = () => {
   
   // Active tab
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Mobile only: 'menu' (list screen) or 'detail' (selected section with a back button)
+  const [mobileScreen, setMobileScreen] = useState('menu');
   
   // Profile form state
   const [form, setForm] = useState({
@@ -434,6 +461,17 @@ const Profile = () => {
 
   const openEdit = () => { setActiveTab('profile'); setIsEditing(true); };
 
+  // Mobile: open a section (detail screen) or go to a page
+  const openMobileItem = (item) => {
+    if (item.tab) {
+      setActiveTab(item.tab);
+      setMobileScreen('detail');
+      window.scrollTo(0, 0);
+    } else {
+      navigate(item.to);
+    }
+  };
+
   const SIDEBAR = [
     { label: 'My Profile', Icon: User, tab: 'profile' },
     { label: 'My Bookings', Icon: CalendarDays, to: ROUTES.bookings },
@@ -496,8 +534,8 @@ const Profile = () => {
 
       <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6">
 
-        {/* ================= SIDEBAR ================= */}
-        <aside className="lg:w-60 shrink-0">
+        {/* ================= SIDEBAR (desktop only) ================= */}
+        <aside className="hidden lg:block lg:w-60 shrink-0">
           <nav aria-label="Account" className={`${CARD} p-2 lg:p-3 lg:sticky lg:top-24`}>
             <ul className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0 profile-noscroll">
               {SIDEBAR.map(({ label, Icon, tab, to }) => {
@@ -537,8 +575,141 @@ const Profile = () => {
         {/* ================= MAIN ================= */}
         <div className="flex-1 min-w-0 space-y-5">
 
-          {/* Hero card */}
-          <section className="rounded-2xl bg-gradient-to-br from-[#0A2833] via-[#0C3C48] to-[#0E6670] text-white p-5 sm:p-7 flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
+          {/* ===== MOBILE: My Profile menu screen (app style) ===== */}
+          {mobileScreen === 'menu' && (
+            <div className="lg:hidden space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between pt-1">
+                <h1 className="text-2xl font-bold text-[#0B1B33]">My Profile</h1>
+                <button
+                  type="button"
+                  onClick={() => openMobileItem({ tab: 'security' })}
+                  aria-label="Settings"
+                  className="w-10 h-10 grid place-items-center rounded-full text-[#0B1B33] hover:bg-white/70 transition-colors"
+                >
+                  <Settings size={22} aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Profile card */}
+              <section className={`${CARD} p-4 flex items-center gap-4`}>
+                <div className="relative shrink-0">
+                  <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-[#0E7C86] to-[#0B2545] grid place-items-center overflow-hidden">
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={32} className="text-white" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    aria-label="Change profile picture"
+                    className="absolute -bottom-0.5 -right-0.5 w-7 h-7 grid place-items-center rounded-full bg-[#0B1B33] text-white border-2 border-white disabled:opacity-60"
+                  >
+                    <Camera size={13} aria-hidden="true" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => openMobileItem({ tab: 'profile' })}
+                  className="flex-1 min-w-0 flex items-center gap-2 text-left"
+                  aria-label="Open personal information"
+                >
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center gap-1.5 text-base font-bold text-[#0B1B33]">
+                      <span className="truncate">{fullName}</span>
+                      <BadgeCheck size={17} className="text-[#0E9F8E] shrink-0" aria-hidden="true" />
+                    </span>
+                    <span className="block text-[13px] text-[#4B5B6E] truncate">{user?.email}</span>
+                    {user?.phone && <span className="block text-[13px] text-[#4B5B6E]">+91 {user.phone}</span>}
+                  </span>
+                  <ChevronRight size={20} className="text-[#0B1B33] shrink-0" aria-hidden="true" />
+                </button>
+              </section>
+
+              {/* Avatar save/cancel (only appears after choosing a photo) */}
+              {avatarFile && (
+                <div className={`${CARD} p-3 flex items-center justify-between gap-3`}>
+                  <p className="text-sm text-[#2B3A50]">New photo selected</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={cancelEditing} className="h-9 px-4 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700">Cancel</button>
+                    <button type="button" onClick={handleUploadAvatar} disabled={uploading} className="h-9 px-4 rounded-lg bg-[#0E7C86] text-white text-sm font-semibold disabled:opacity-60 inline-flex items-center gap-1.5">
+                      {uploading && <Loader2 size={14} className="animate-spin" />} Save
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats */}
+              <section className={`${CARD} grid grid-cols-3 divide-x divide-[#E8EDF1] py-4 text-center`}>
+                <div className="px-2 flex flex-col items-center">
+                  <CalendarDays size={22} className="text-[#0E9F8E]" aria-hidden="true" />
+                  <p className="mt-1.5 text-lg font-bold text-[#0B1B33] leading-tight">{stats.totalBookings || 0}</p>
+                  <p className="text-xs text-[#5B6B7F]">Bookings</p>
+                </div>
+                <div className="px-2 flex flex-col items-center">
+                  <Star size={22} className="text-amber-400 fill-amber-400" aria-hidden="true" />
+                  <p className="mt-1.5 text-lg font-bold text-[#0B1B33] leading-tight">—</p>
+                  <p className="text-xs text-[#5B6B7F]">Rating</p>
+                </div>
+                <div className="px-2 flex flex-col items-center">
+                  <Crown size={22} className="text-amber-500" aria-hidden="true" />
+                  <p className="mt-1.5 text-lg font-bold text-[#0B1B33] leading-tight">{user?.role === 'provider' ? 'Partner' : 'Member'}</p>
+                  <p className="text-xs text-[#5B6B7F]">{memberSince ? `Since ${memberSince}` : 'Welcome'}</p>
+                </div>
+              </section>
+
+              {/* Menu list */}
+              <nav aria-label="Account menu" className={`${CARD} overflow-hidden`}>
+                <ul>
+                  {MOBILE_MENU.map((item) => (
+                    <li key={item.label} className="border-b border-[#EEF1F4] last:border-0">
+                      <button
+                        type="button"
+                        onClick={() => openMobileItem(item)}
+                        className="w-full flex items-center gap-4 px-4 h-[54px] text-left hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      >
+                        <item.Icon size={21} className="text-[#0B1B33] shrink-0" aria-hidden="true" />
+                        <span className="flex-1 text-[15px] font-medium text-[#0B1B33]">{item.label}</span>
+                        <ChevronRight size={18} className="text-[#0B1B33] shrink-0" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+
+              {/* Logout */}
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full flex items-center gap-4 px-4 h-[54px] rounded-xl bg-[#FDECEC] text-red-600 font-semibold text-[15px] hover:bg-[#FBE0E0] transition-colors"
+              >
+                <LogOut size={21} aria-hidden="true" />
+                Logout
+              </button>
+            </div>
+          )}
+
+          {/* ===== MOBILE: detail screen header (back button) ===== */}
+          {mobileScreen === 'detail' && (
+            <div className="lg:hidden flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => { setMobileScreen('menu'); window.scrollTo(0, 0); }}
+                aria-label="Back to My Profile"
+                className="w-10 h-10 -ml-2 grid place-items-center rounded-full text-[#0B1B33] hover:bg-white/70 transition-colors"
+              >
+                <ArrowLeft size={22} aria-hidden="true" />
+              </button>
+              <h1 className="text-xl font-bold text-[#0B1B33]">{DETAIL_TITLES[activeTab] || 'My Profile'}</h1>
+            </div>
+          )}
+
+          {/* Hero card (desktop only) */}
+          <section className="hidden lg:flex rounded-2xl bg-gradient-to-br from-[#0A2833] via-[#0C3C48] to-[#0E6670] text-white p-5 sm:p-7 flex-col md:flex-row md:items-center gap-6 md:gap-8">
             <div className="flex items-center gap-5 flex-1 min-w-0">
               <div className="relative shrink-0">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white/90 bg-gradient-to-br from-[#0E7C86] to-[#0B2545] grid place-items-center overflow-hidden shadow-lg">
@@ -599,8 +770,8 @@ const Profile = () => {
             </div>
           </section>
 
-          {/* Tabs */}
-          <div className="flex gap-6 overflow-x-auto profile-noscroll border-b border-[#E3E8EC]" role="tablist" aria-label="Profile sections">
+          {/* Tabs (desktop only) */}
+          <div className="hidden lg:flex gap-6 overflow-x-auto profile-noscroll border-b border-[#E3E8EC]" role="tablist" aria-label="Profile sections">
             {TABS.map(([key, label]) => (
               <button
                 key={key}
@@ -618,6 +789,9 @@ const Profile = () => {
               </button>
             ))}
           </div>
+
+          {/* Section content: always on desktop; on mobile only after opening a section */}
+          <div className={`${mobileScreen === 'menu' ? 'hidden lg:block' : ''} space-y-5`}>
 
           {/* ============ TAB: Personal Information ============ */}
           {activeTab === 'profile' && (
@@ -995,6 +1169,8 @@ const Profile = () => {
               </div>
             </section>
           )}
+
+          </div>
         </div>
       </div>
 

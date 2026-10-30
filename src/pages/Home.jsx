@@ -141,7 +141,7 @@ const MostBookedCard = ({ service }) => {
         </div>
 
         <div className="pt-3">
-          <h3 className="text-[15px] font-medium text-[#111827] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
+          <h3 className="text-[15px] font-medium text-[#0B2545] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
           {(rating || instant) && (
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[#374151]">
               {rating && (
@@ -159,7 +159,7 @@ const MostBookedCard = ({ service }) => {
             </p>
           )}
           {hasPrice && (
-            <p className="mt-1 flex items-baseline gap-2 flex-wrap text-sm text-[#111827]">
+            <p className="mt-1 flex items-baseline gap-2 flex-wrap text-sm text-[#0B2545]">
               <span>₹{service.basePrice}</span>
               {mrp && <span className="text-[#6B7280] line-through">₹{mrp}</span>}
             </p>
@@ -193,7 +193,7 @@ const MostBookedSection = ({ services = [], id = 'popular-title' }) => {
       type="button"
       onClick={() => scrollBy(dir)}
       aria-label={dir < 0 ? 'Previous most booked services' : 'Next most booked services'}
-      className={`absolute top-[calc((100%-5.5rem)/2)] -translate-y-1/2 ${dir < 0 ? '-left-5' : '-right-5'} z-20 hidden lg:grid w-11 h-11 place-items-center rounded-full bg-white border border-[#E5E7EB] text-[#111827] shadow-md hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
+      className={`absolute top-[calc((100%-5.5rem)/2)] -translate-y-1/2 ${dir < 0 ? '-left-5' : '-right-5'} z-20 hidden lg:grid w-11 h-11 place-items-center rounded-full bg-white border border-[#E5E7EB] text-[#0B2545] shadow-md hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
     >
       {dir < 0 ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
     </button>
@@ -202,7 +202,7 @@ const MostBookedSection = ({ services = [], id = 'popular-title' }) => {
   return (
     <section aria-labelledby={id} className="py-7 md:py-11 bg-white">
       <div className={WRAP}>
-        <h2 id={id} className="text-2xl md:text-[32px] font-bold tracking-tight text-[#111827] leading-tight">Most booked services</h2>
+        <h2 id={id} className="text-2xl md:text-[32px] font-bold tracking-tight text-[#0B2545] leading-tight">Most booked services</h2>
 
         <div className="relative mt-6">
           {canPrev && arrow(-1)}
@@ -244,9 +244,9 @@ const CategoryServiceCard = ({ service }) => {
         </div>
 
         <div className="pt-3 px-0.5">
-          <h3 className="text-[15px] font-medium text-[#0B1B33] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
+          <h3 className="text-[15px] font-medium text-[#0B2545] leading-snug line-clamp-2 min-h-[2.5em]">{service.name}</h3>
           {rating && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-[#0B1B33]">
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-[#0B2545]">
               <Star className="w-4 h-4 text-amber-400 fill-amber-400" aria-hidden="true" />
               <span>{Math.round(rating * 100) / 100}</span>
               {reviews && <span className="text-[#8A94A3]">({compact(reviews)})</span>}
@@ -254,7 +254,7 @@ const CategoryServiceCard = ({ service }) => {
           )}
           {hasPrice && (
             <p className="mt-2 flex items-baseline gap-2.5 flex-wrap">
-              <span className="text-xl font-bold text-[#0B1B33]">₹{service.basePrice}</span>
+              <span className="text-xl font-bold text-[#0B2545]">₹{service.basePrice}</span>
               {mrp && <span className="text-sm text-[#8A94A3] line-through">₹{mrp}</span>}
             </p>
           )}
@@ -288,7 +288,7 @@ const CategoryRowSection = ({ category, services }) => {
       onClick={() => scrollBy(dir)}
       disabled={!enabled}
       aria-label={`${dir < 0 ? 'Previous' : 'Next'} ${category.name} services`}
-      className={`hidden sm:grid w-11 h-11 place-items-center rounded-full border text-[#0B1B33] transition-colors disabled:bg-[#F3F4F6] disabled:border-transparent disabled:text-[#9AA3AF] disabled:cursor-not-allowed bg-white border-[#E5E7EB] hover:bg-[#F3F4F6] ${FOCUS}`}
+      className={`hidden sm:grid w-11 h-11 place-items-center rounded-full border text-[#0B2545] transition-colors disabled:bg-[#F3F4F6] disabled:border-transparent disabled:text-[#9AA3AF] disabled:cursor-not-allowed bg-white border-[#E5E7EB] hover:bg-[#F3F4F6] ${FOCUS}`}
     >
       {dir < 0 ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
     </button>
@@ -300,7 +300,7 @@ const CategoryRowSection = ({ category, services }) => {
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
             <p className="text-xs md:text-sm font-medium uppercase tracking-wider text-[#6B7280]">Popular services</p>
-            <h2 id={titleId} className="mt-1 text-[28px] sm:text-4xl md:text-[44px] font-extrabold tracking-tight text-[#0B1B33] leading-[1.1]">{category.name}</h2>
+            <h2 id={titleId} className="mt-1 text-[28px] sm:text-4xl md:text-[44px] font-extrabold tracking-tight text-[#0B2545] leading-[1.1]">{category.name}</h2>
             {subtitle && <p className="mt-2 text-sm md:text-base text-[#6B7280] line-clamp-2">{subtitle}</p>}
           </div>
 
@@ -308,7 +308,7 @@ const CategoryRowSection = ({ category, services }) => {
             <Link
               to={`/category/${category.slug}`}
               aria-label={`See all ${category.name} services`}
-              className={`inline-flex items-center gap-1.5 h-11 px-3 sm:mr-4 rounded-lg text-sm md:text-base font-semibold text-[#0B1B33] hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
+              className={`inline-flex items-center gap-1.5 h-11 px-3 sm:mr-4 rounded-lg text-sm md:text-base font-semibold text-[#0B2545] hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
             >
               See all <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
@@ -344,7 +344,7 @@ const HERO_TILES = [
 const HERO_STATS = [
   { Icon: Star,        value: '4.8',      label: 'Service Rating' },
   { Icon: Users,       value: '12M+',     label: 'Happy Customers' },
-  { Icon: ShieldCheck, value: 'Verified', label: 'Professionals' },
+  // { Icon: ShieldCheck, value: 'Verified', label: 'Professionals' },
 ];
 
 const HeroTile = ({ label, image, Icon, to, span }) => {
@@ -393,7 +393,7 @@ const SPOTLIGHT = [
     image: '',
   },
   {
-    id: 'repairs', theme: 'split', bg: '#0A63C9', tag: '',
+    id: 'repairs', theme: 'split', bg: '#0E7C86', tag: '',
     title: 'Home repairs at affordable prices', subtitle: 'Electricians, plumbers, carpenters', startingAt: null, cta: 'Book now',
     match: /electric|plumb|carpent|repair/i, serviceMatch: null,
     image: 'https://res.cloudinary.com/djtvxmttf/image/upload/v1793017283/2b0f9a52-ddb8-4782-a3b4-e8ce16431571.png',
@@ -402,13 +402,13 @@ const SPOTLIGHT = [
 
 const SpotlightCard = ({ item, to, image }) => {
   const isDark = item.theme === 'dark' || item.theme === 'split';
-  const text = isDark ? 'text-white' : 'text-[#111827]';
+  const text = isDark ? 'text-white' : 'text-[#0B2545]';
   const sub = isDark ? 'text-white/85' : 'text-[#374151]';
   const btn = item.theme === 'light'
-    ? 'bg-white text-[#111827]'
+    ? 'bg-white text-[#0B2545]'
     : item.theme === 'dark'
-      ? 'bg-[#111827] text-white'
-      : 'bg-[#0A4C9A] text-white';
+      ? 'bg-[#0B2545] text-white'
+      : 'bg-[#0B6A73] text-white';
   const isSplit = item.theme === 'split';
 
   const body = (
@@ -483,7 +483,7 @@ const SpotlightSection = ({ categories, services }) => {
       type="button"
       onClick={() => scrollBy(dir)}
       aria-label={dir < 0 ? 'Previous spotlight' : 'Next spotlight'}
-      className={`absolute top-1/2 -translate-y-1/2 ${dir < 0 ? '-left-5' : '-right-5'} z-20 hidden lg:grid w-11 h-11 place-items-center rounded-full bg-white border border-[#E5E7EB] text-[#111827] shadow-md hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
+      className={`absolute top-1/2 -translate-y-1/2 ${dir < 0 ? '-left-5' : '-right-5'} z-20 hidden lg:grid w-11 h-11 place-items-center rounded-full bg-white border border-[#E5E7EB] text-[#0B2545] shadow-md hover:bg-[#F3F4F6] transition-colors ${FOCUS}`}
     >
       {dir < 0 ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
     </button>
@@ -492,7 +492,7 @@ const SpotlightSection = ({ categories, services }) => {
   return (
     <section aria-labelledby="spotlight-title" className="py-7 md:py-11 bg-white">
       <div className={WRAP}>
-        <h2 id="spotlight-title" className="text-2xl md:text-[32px] font-bold tracking-tight text-[#111827] leading-tight">In the spotlight</h2>
+        <h2 id="spotlight-title" className="text-2xl md:text-[32px] font-bold tracking-tight text-[#0B2545] leading-tight">In the spotlight</h2>
         <div className="relative mt-6">
           {arrow(-1, canPrev)}
           <ul
@@ -522,7 +522,7 @@ const SpotlightSection = ({ categories, services }) => {
    Offer text (e.g. "Up to ₹4,300 off") is only what you write here, so keep it in sync with real offers. */
 const PROMOS = [
   {
-    id: 'native-ro', always: true, from: '#4A2BC2', to: '#1B0E5E', fit: 'contain', Icon: Droplets,
+    id: 'native-ro', always: true, from: '#0E7C86', to: '#0B2545', fit: 'contain', Icon: Droplets,
     tag: 'Native Festive Days • Up to ₹4,300 off',
     title: 'Native RO Water Purifier', highlight: 'Now at its lowest price ever', cta: 'Buy now',
     match: /water|purifier|smart/i, image: '',
@@ -550,11 +550,11 @@ const PromoSlide = ({ promo, to, image }) => {
 
       <div className="absolute inset-y-0 left-0 w-[68%] sm:w-[62%] flex flex-col justify-center p-5 sm:p-8 lg:p-10">
         {promo.tag && (
-          <span className="absolute top-0 left-5 sm:left-8 lg:left-10 rounded-b-lg bg-[#111827] text-white text-[11px] sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 max-w-[85%]">{promo.tag}</span>
+          <span className="absolute top-0 left-5 sm:left-8 lg:left-10 rounded-b-lg bg-[#0B2545] text-white text-[11px] sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 max-w-[85%]">{promo.tag}</span>
         )}
         <h3 className="mt-6 text-lg sm:text-3xl font-semibold leading-tight text-white">{promo.title}</h3>
         {promo.highlight && <p className="mt-1 text-xl sm:text-4xl lg:text-[44px] font-bold leading-tight text-[#FDB44B]">{promo.highlight}</p>}
-        <span className="mt-5 sm:mt-8 inline-flex items-center h-10 sm:h-12 px-5 sm:px-6 rounded-xl bg-white text-[#111827] text-sm sm:text-lg font-semibold w-fit shadow">{promo.cta || 'Book now'}</span>
+        <span className="mt-5 sm:mt-8 inline-flex items-center h-10 sm:h-12 px-5 sm:px-6 rounded-xl bg-white text-[#0B2545] text-sm sm:text-lg font-semibold w-fit shadow">{promo.cta || 'Book now'}</span>
       </div>
     </>
   );
@@ -605,13 +605,13 @@ const PromoCarousel = ({ groups }) => {
 
           {multi && active > 0 && (
             <button type="button" onClick={() => goTo(active - 1)} aria-label="Previous offer"
-              className={`absolute left-3 top-1/2 -translate-y-1/2 hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white/95 text-[#111827] shadow-md hover:bg-white ${FOCUS}`}>
+              className={`absolute left-3 top-1/2 -translate-y-1/2 hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white/95 text-[#0B2545] shadow-md hover:bg-white ${FOCUS}`}>
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
           {multi && active < slides.length - 1 && (
             <button type="button" onClick={() => goTo(active + 1)} aria-label="Next offer"
-              className={`absolute right-3 top-1/2 -translate-y-1/2 hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white/95 text-[#111827] shadow-md hover:bg-white ${FOCUS}`}>
+              className={`absolute right-3 top-1/2 -translate-y-1/2 hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white/95 text-[#0B2545] shadow-md hover:bg-white ${FOCUS}`}>
               <ArrowRight className="w-5 h-5" />
             </button>
           )}
@@ -627,7 +627,7 @@ const PromoCarousel = ({ groups }) => {
                 aria-selected={i === active}
                 aria-label={`Go to offer ${i + 1}`}
                 onClick={() => goTo(i)}
-                className={`h-2 rounded-full transition-all ${i === active ? 'w-6 bg-[#111827]' : 'w-2 bg-[#D1D5DB]'} ${FOCUS}`}
+                className={`h-2 rounded-full transition-all ${i === active ? 'w-6 bg-[#0B2545]' : 'w-2 bg-[#D1D5DB]'} ${FOCUS}`}
               />
             ))}
           </div>
@@ -785,14 +785,14 @@ export default function Home() {
 
             {/* LEFT */}
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#E3F5F1] pl-1.5 pr-3 py-1 text-[12px] md:text-[13px] font-medium text-[#0B2545]">
+              {/* <span className="inline-flex items-center gap-2 rounded-full bg-[#E3F5F1] pl-1.5 pr-3 py-1 text-[12px] md:text-[13px] font-medium text-[#0B2545]">
                 <span className="w-6 h-6 rounded-full bg-[#0E7C86] text-white grid place-items-center">
                   <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
                 </span>
                 Trusted Home Service Partner in Rajasthan
-              </span>
+              </span> */}
 
-              <h1 id="hero-title" className="mt-4 text-[32px] sm:text-5xl lg:text-[52px] leading-[1.08] font-extrabold tracking-tight text-[#0B1B33]">
+              <h1 id="hero-title" className="mt-4 text-[32px] sm:text-5xl lg:text-[52px] leading-[1.08] font-extrabold tracking-tight text-[#0B2545]">
                 Everything Your Home Needs,{' '}
                 <span className="block text-[#0E7C86]">At Your Doorstep</span>
               </h1>
@@ -825,7 +825,7 @@ export default function Home() {
                         <span className="w-full h-[52px] md:h-[60px] rounded-xl bg-[#F1F3F5] grid place-items-center">
                           <Grid2x2 className="w-6 h-6 md:w-7 md:h-7 text-[#0B2545]" aria-hidden="true" />
                         </span>
-                        <span className="text-[11px] md:text-[12.5px] font-medium text-[#1E2E45] leading-tight">All Services</span>
+                        <span className="text-[11px] md:text-[12.5px] font-medium text-[#1E2E45] leading-tight" src="https://res.cloudinary.com/djtvxmttf/image/upload/v1793351874/60cc4993-08cf-4b35-8cfd-3daf49f93029.png">All Services</span>
                       </a>
                     </li>
                   </ul>
@@ -833,7 +833,7 @@ export default function Home() {
               )}
 
               {/* Smart Living Products banner */}
-              <a href="#categories" className={`mt-4 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-[#E3F5F1] to-[#F1FAF7] px-4 py-3 md:py-4 ${FOCUS}`}>
+              {/* <a href="#categories" className={`mt-4 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-[#E3F5F1] to-[#F1FAF7] px-4 py-3 md:py-4 ${FOCUS}`}>
                 <span className="w-12 h-12 shrink-0 rounded-xl bg-white grid place-items-center">
                   <Sparkles className="w-6 h-6 text-[#0E7C86]" aria-hidden="true" />
                 </span>
@@ -844,7 +844,7 @@ export default function Home() {
                 <span className="w-9 h-9 shrink-0 rounded-full bg-[#10B981] text-white grid place-items-center">
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </span>
-              </a>
+              </a> */}
 
               {/* Stats */}
               <dl className="mt-5 pt-5 border-t border-[#E3E8EC] flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -864,7 +864,7 @@ export default function Home() {
             <div>
               <p
                 aria-hidden="true"
-                className="hidden lg:block text-right text-[28px] leading-[1.1] text-[#0B1B33] -rotate-6 mb-3 mr-2"
+                className="hidden lg:block text-right text-[28px] leading-[1.1] text-[#0B2545] -rotate-6 mb-3 mr-2"
                 style={{ fontFamily: "'Caveat', 'Segoe Script', 'Brush Script MT', cursive" }}
               >
                 Clean Homes<br />Happier Lives
@@ -941,7 +941,7 @@ export default function Home() {
       {hasAppLink && (
         <section aria-label="Puchhuu app" className="py-4 md:py-8">
           <div className={WRAP}>
-            <div className="rounded-3xl bg-gradient-to-br from-[#4C1DB8] to-[#7C3AED] text-white p-6 md:p-10">
+            <div className="rounded-3xl bg-gradient-to-br from-[#0B2545] to-[#0E7C86] text-white p-6 md:p-10">
               <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight">Puchhuu App</h2>
               <p className="mt-2 max-w-md text-white/85 text-sm md:text-lg">Book faster, track in real-time and get exclusive offers.</p>
               <div className="mt-5 flex flex-wrap gap-3">
@@ -960,7 +960,7 @@ export default function Home() {
 
             {/* LEFT: Why Choose card */}
             <div className="rounded-2xl bg-[#F3F8F9] p-5 md:p-8">
-              <h2 id="why-title" className="text-2xl md:text-[28px] font-bold text-[#0F1B2D] mb-6 md:mb-8">
+              <h2 id="why-title" className="text-2xl md:text-[28px] font-bold text-[#0B2545] mb-6 md:mb-8">
                 Why Choose Puchhuu?
               </h2>
 

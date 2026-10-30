@@ -3,10 +3,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { fetchAddresses, addAddress, createBooking } from '../services/api';
+import { fetchAddresses, addAddress, createBooking, createOrder, verifyPayment } from '../services/api';
 import {
   ArrowLeft, MapPin, Plus, Shield, Building2, Home, ShoppingCart, X, Check,
-  CalendarDays, Banknote, ImagePlus, ChevronUp, Lock, Loader2,
+  CalendarDays, Banknote, ImagePlus, ChevronUp, Lock, Loader2, Smartphone, QrCode,
 } from 'lucide-react';
 
 const FONT_STACK = "'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -24,6 +24,29 @@ const SLOTS = [
 ];
 const COMMON_REQUESTS = ['Urgent service', 'Bring extra parts', 'Call before arrival', 'Parking available'];
 const ADDRESS_TYPES = [['home', 'Home', Home], ['work', 'Office', Building2], ['other', 'Other', MapPin]];
+
+// ---------------------------------------------------------------------------
+// Payment options. 'cod' = pay after service. 'upi' / 'qr' = pay online now (Razorpay, UPI only).
+// PAYMENT_METHOD_VALUE = booking.payment.method jo backend ko bheja jata hai.
+// Agar tumhare Booking model ke enum me 'online' nahi hai to yahan sahi value daal do.
+// ---------------------------------------------------------------------------
+const PAYMENT_OPTIONS = [
+  { id: 'upi', label: 'UPI', sub: 'Google Pay, PhonePe, Paytm & more', Icon: Smartphone, online: true },
+  { id: 'qr', label: 'QR Code', sub: 'Scan & pay using any UPI app', Icon: QrCode, online: true },
+  { id: 'cod', label: 'Cash on Service', sub: 'Pay after the work is done', Icon: Banknote, online: false },
+];
+const PAYMENT_METHOD_VALUE = { cod: 'cod', upi: 'online', qr: 'online' };
+
+const loadRazorpayScript = () =>
+  window.Razorpay
+    ? Promise.resolve()
+    : new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load the payment window. Please check your internet.'));
+        document.body.appendChild(script);
+      });
 
 const pad = (n) => String(n).padStart(2, '0');
 const toYMD = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -79,6 +102,8 @@ const CheckoutPage = () => {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedSlot, setSelectedSlot] = useState(() => firstFreeSlot(initialDate()));
   const [formError, setFormError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [processingLabel, setProcessingLabel] = useState('Creating Booking...');
   const [addrError, setAddrError] = useState('');
   const previewsRef = useRef([]);
   useEffect(() => { previewsRef.current = imagePreviews; }, [imagePreviews]);
@@ -182,8 +207,61 @@ const CheckoutPage = () => {
 
   const addRequest = (text) => setOrderNote((prev) => (prev.includes(text) ? prev : prev ? `${prev}. ${text}` : text));
 
+  // Razorpay (UPI only). Resolves { paid, reason }. Same order/verify APIs as My Bookings "Pay Now".
+  const payOnline = async (bookingDoc) => {
+    const orderRes = await createOrder({ bookingId: bookingDoc._id });
+    if (!orderRes.success) throw new Error(orderRes.message || 'Failed to create payment order');
+    await loadRazorpayScript();
+    if (!import.meta.env.VITE_RAZORPAY_KEY_ID) throw new Error('Razorpay Key ID missing. Check environment variables.');
+
+    return new Promise((resolve) => {
+      let failure = '';
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: orderRes.data.amount,
+        currency: orderRes.data.currency,
+        name: 'Puchhuu',
+        description: `Booking ${bookingDoc.bookingId || ''}`.trim(),
+        order_id: orderRes.data.orderId,
+        handler: async (response) => {
+          try {
+            const verifyRes = await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            resolve(verifyRes.success ? { paid: true } : { paid: false, reason: 'Payment verification failed.' });
+          } catch (err) {
+            resolve({ paid: false, reason: 'Payment verification failed: ' + err.message });
+          }
+        },
+        prefill: {
+          name: user?.fullName || [user?.firstName, user?.lastName].filter(Boolean).join(' '),
+          email: user?.email,
+          contact: user?.phone,
+        },
+        theme: { color: '#0E7C86' },
+        // Sirf UPI dikhao (UPI apps / QR, jo Razorpay dashboard me enabled ho)
+        config: {
+          display: {
+            blocks: { upi: { name: 'Pay via UPI', instruments: [{ method: 'upi' }] } },
+            sequence: ['block.upi'],
+            preferences: { show_default_blocks: false },
+          },
+        },
+        modal: { ondismiss: () => resolve({ paid: false, reason: failure || 'Payment was not completed.' }) },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (response) => { failure = response.error?.description || 'Payment failed.'; });
+      rzp.open();
+    });
+  };
+
+  const isOnlinePayment = PAYMENT_OPTIONS.find((o) => o.id === paymentMethod)?.online ?? false;
+
   const handlePlaceOrder = async () => {
     setFormError('');
+    setProcessingLabel('Creating Booking...');
     if (!selectedAddress) { setFormError('Please select or add a delivery address'); return; }
     if (checkoutItems.length === 0) { setFormError('Your cart is empty'); return; }
     if (!selectedDate || !selectedSlot) { setFormError('Please choose a date and time slot'); return; }
@@ -201,7 +279,7 @@ const CheckoutPage = () => {
         pincode: selectedAddress.pincode,
         type: selectedAddress.type || 'home'
       };
-      const payment = { method: 'cod', status: 'pending' };
+      const payment = { method: PAYMENT_METHOD_VALUE[paymentMethod] || 'cod', status: 'pending' };
       const scheduledTime = { start: selectedSlot };
       const scheduledDate = selectedDate;
 
@@ -222,9 +300,25 @@ const CheckoutPage = () => {
         const errorMsg = bookingRes.errors ? bookingRes.errors.map(e => `${e.field}: ${e.message}`).join(', ') : bookingRes.message || 'Failed to create booking';
         throw new Error(errorMsg);
       }
-      const bookingId = bookingRes.data.booking._id;
+      const bookingDoc = bookingRes.data.booking;
+      const bookingId = bookingDoc._id;
       if (!location.state?.directBooking) clearCart();
-      navigate('/order-success', { state: { bookingId } });
+
+      if (!isOnlinePayment) {
+        navigate('/order-success', { state: { bookingId, payment: 'cod' } });
+        return;
+      }
+
+      // Online payment: booking ban chuki hai, ab payment window kholo
+      setProcessingLabel('Opening payment...');
+      try {
+        const result = await payOnline(bookingDoc);
+        navigate('/order-success', {
+          state: { bookingId, payment: result.paid ? 'paid' : 'pending', paymentMessage: result.reason },
+        });
+      } catch (payErr) {
+        navigate('/order-success', { state: { bookingId, payment: 'pending', paymentMessage: payErr.message } });
+      }
     } catch (error) {
       console.error('Booking error:', error);
       setFormError(error.message || 'Failed to create booking. Please try again.');
@@ -251,6 +345,7 @@ const CheckoutPage = () => {
     label, state: i < currentStep ? 'done' : i === currentStep ? 'current' : 'upcoming',
   }));
   const canConfirm = !processing && addressDone && scheduleDone;
+  const confirmLabel = isOnlinePayment ? `Pay ₹${total.toFixed(0)} & Confirm` : 'Confirm Booking';
   const dateLabel = (d) => ({
     day: d.toLocaleDateString('en-IN', { weekday: 'short' }),
     dm: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
@@ -439,25 +534,58 @@ const CheckoutPage = () => {
                 <div className="flex justify-between"><dt className="text-[#5B6B7F]">GST (18%)</dt><dd className="font-medium">₹{gst.toFixed(2)}</dd></div>
                 <div className="flex justify-between pt-3 mt-1 border-t border-[#EEF1F4] text-lg font-extrabold"><dt>Total Amount</dt><dd>₹{total.toFixed(2)}</dd></div>
               </dl>
-              <p className="mt-4 text-xs text-[#5B6B7F] bg-[#FFF8E6] border border-[#F6E3B0] p-3 rounded-lg">Payment is collected after the service is completed. The final price will be confirmed by the provider.</p>
+              {isOnlinePayment ? (
+                <p className="mt-4 text-xs text-[#0B5F67] bg-[#E8F7F8] border border-[#BFE6EA] p-3 rounded-lg">You will pay securely online right after confirming. The final price will be confirmed by the provider.</p>
+              ) : (
+                <p className="mt-4 text-xs text-[#5B6B7F] bg-[#FFF8E6] border border-[#F6E3B0] p-3 rounded-lg">Payment is collected after the service is completed. The final price will be confirmed by the provider.</p>
+              )}
             </section>
 
             <section className={CARD} aria-labelledby="pay-h">
               <h2 id="pay-h" className="text-lg font-extrabold mb-3">Payment Method</h2>
-              <div className="flex items-center gap-3 rounded-xl border border-[#0E7C86] bg-[#F0F9FA] p-3.5">
-                <span className="w-10 h-10 rounded-full bg-[#E3F5F1] grid place-items-center shrink-0"><Banknote className="w-5 h-5 text-[#0E7C86]" aria-hidden="true" /></span>
-                <div className="flex-1"><p className="text-sm font-bold">Cash on Service</p><p className="text-xs text-[#5B6B7F]">Pay after the work is done</p></div>
-                <Check className="w-5 h-5 text-[#0E7C86]" aria-label="Selected" />
+              <div className="space-y-2.5" role="radiogroup" aria-label="Payment method">
+                {PAYMENT_OPTIONS.map(({ id, label, sub, Icon, online }) => {
+                  const on = paymentMethod === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setPaymentMethod(id)}
+                      className={`w-full flex items-center gap-3 rounded-xl border p-3.5 text-left transition-colors ${FOCUS} ${on ? 'border-[#0E7C86] bg-[#F0F9FA]' : 'border-[#DDE3E8] bg-white hover:border-[#0E7C86]/50'}`}
+                    >
+                      <span className="w-10 h-10 rounded-full bg-[#E3F5F1] grid place-items-center shrink-0"><Icon className="w-5 h-5 text-[#0E7C86]" aria-hidden="true" /></span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{label}</span>
+                          {online && <span className="text-[10px] font-semibold uppercase tracking-wide bg-[#E3F5F1] text-[#0E7C86] px-1.5 py-0.5 rounded">Online</span>}
+                        </span>
+                        <span className="block text-xs text-[#5B6B7F]">{sub}</span>
+                      </span>
+                      <span className={`w-5 h-5 rounded-full border-2 grid place-items-center shrink-0 ${on ? 'border-[#0E7C86] bg-[#0E7C86]' : 'border-[#C9D3DC]'}`} aria-hidden="true">
+                        {on && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              {isOnlinePayment && (
+                <p className="mt-3 text-xs text-[#5B6B7F] flex items-start gap-1.5"><Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                  {paymentMethod === 'qr'
+                    ? 'A secure payment window will open with a UPI QR code you can scan from any UPI app.'
+                    : 'A secure payment window will open where you can pay with your UPI app.'}
+                </p>
+              )}
             </section>
 
             {formError && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-3">{formError}</p>}
 
             <div className="hidden lg:block">
               <button onClick={handlePlaceOrder} disabled={!canConfirm} className={`w-full h-14 rounded-xl bg-[#12614F] hover:bg-[#0E7C86] text-white font-bold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${FOCUS}`}>
-                {processing ? <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> Creating Booking...</> : 'Confirm Booking'}
+                {processing ? <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> {processingLabel}</> : confirmLabel}
               </button>
-              <p className="mt-3 text-center text-xs text-[#5B6B7F] inline-flex w-full items-center justify-center gap-1.5"><Lock className="w-3.5 h-3.5" aria-hidden="true" /> No online payment required</p>
+              <p className="mt-3 text-center text-xs text-[#5B6B7F] inline-flex w-full items-center justify-center gap-1.5"><Lock className="w-3.5 h-3.5" aria-hidden="true" /> {isOnlinePayment ? 'Secure payment powered by Razorpay' : 'No online payment required'}</p>
             </div>
           </aside>
         </div>
@@ -471,7 +599,7 @@ const CheckoutPage = () => {
             <a href="#summary" className="text-xs font-semibold text-[#0E7C86] inline-flex items-center gap-0.5 mt-1">View Details <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" /></a>
           </div>
           <button onClick={handlePlaceOrder} disabled={!canConfirm} className={`flex-1 h-12 rounded-xl bg-[#12614F] hover:bg-[#0E7C86] text-white font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 ${FOCUS}`}>
-            {processing ? <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> Creating...</> : 'Confirm Booking'}
+            {processing ? <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> {isOnlinePayment ? 'Please wait...' : 'Creating...'}</> : confirmLabel}
           </button>
         </div>
       </div>

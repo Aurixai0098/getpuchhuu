@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createService, updateService, deleteService, fetchServices, fetchCategories } from '../../services/api';
 
+// First letter of every word capital, rest small (display only)
+const toTitle = (str) =>
+  String(str || '').toLowerCase().replace(/(^|\s|-)([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
+
 const AdminServices = () => {
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -13,6 +17,7 @@ const AdminServices = () => {
   });
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Load services and categories
   const loadServices = async () => {
@@ -101,6 +106,24 @@ const AdminServices = () => {
     }
   };
 
+  // Search filter + A to Z sort (display only, no backend change)
+  const filteredServices = [...services]
+    .filter(s => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      const catName = String(s.category?.name || s.category || '').toLowerCase();
+      return (
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.slug || '').toLowerCase().includes(q) ||
+        catName.includes(q)
+      );
+    })
+    .sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()));
+
+  const sortedCategories = [...categories].sort((a, b) =>
+    (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())
+  );
+
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
       <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -124,22 +147,33 @@ const AdminServices = () => {
         </button>
       </div>
 
+      {/* Search Box */}
+      <div className="sticky top-0 z-30 bg-gray-50 py-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, slug or category..."
+          className="w-full md:w-80 px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+        />
+      </div>
+
       {/* Services Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Image</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Featured</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Image</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Name</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Category</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Price</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Status</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Featured</th>
+              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
-            {services.map(s => (
+            {filteredServices.map(s => (
               <tr key={s._id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   {s.images?.[0]?.url ? (
@@ -148,8 +182,8 @@ const AdminServices = () => {
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">📷</div>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{s.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">{s.category?.name || s.category}</td>
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{toTitle(s.name)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">{toTitle(s.category?.name || s.category)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 font-semibold">₹{s.basePrice} <span className="text-gray-400 text-xs font-normal">/{s.priceUnit || 'service'}</span></td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${s.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -165,9 +199,11 @@ const AdminServices = () => {
                 </td>
               </tr>
             ))}
-            {services.length === 0 && (
+            {filteredServices.length === 0 && (
               <tr>
-                <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No services found. Click "Add Service" to create one.</td>
+                <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                  {search ? 'No matching services found.' : 'No services found. Click "Add Service" to create one.'}
+                </td>
               </tr>
             )}
           </tbody>
@@ -200,7 +236,7 @@ const AdminServices = () => {
                   <textarea rows="2" value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Details about the service..."></textarea>
                 </div>
 
-                {/* Category Dropdown */}
+                {/* Category Dropdown (A to Z) */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   {loadingCategories ? (
@@ -216,9 +252,9 @@ const AdminServices = () => {
                       className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                     >
                       <option value="">-- Select Category --</option>
-                      {categories.map(cat => (
+                      {sortedCategories.map(cat => (
                         <option key={cat._id} value={cat._id}>
-                          {cat.name} {!cat.isActive && '(Inactive)'}
+                          {toTitle(cat.name)} {!cat.isActive && '(Inactive)'}
                         </option>
                       ))}
                     </select>

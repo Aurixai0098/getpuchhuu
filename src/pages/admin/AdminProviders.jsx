@@ -1,5 +1,6 @@
+// src/pages/admin/AdminProviders.jsx
 import { useState, useEffect } from 'react';
-import { fetchAllProviders, fetchAdminUserDetails, updateAdminUserStatus } from '../../services/api';
+import { fetchAllProviders, fetchAdminUserDetails, updateAdminUserStatus, apiFetch } from '../../services/api';
 
 // Modern Lucide Icons
 import {
@@ -26,8 +27,30 @@ import {
   Briefcase,
   Verified,
   Clock,
-  XCircle
+  XCircle,
+  Trash2,
+  Loader2
 } from 'lucide-react';
+
+/* ------------------------------------------------------------------
+   PERMANENT DELETE SETTINGS
+   Backend me provider ko hamesha ke liye delete karne wala route chahiye.
+   Agar aapke API ka path alag hai (jaise /admin/users/:id), to sirf yahan badlo.
+------------------------------------------------------------------ */
+const PROVIDER_DELETE = {
+  method: 'DELETE',
+  path: (provider) => `/admin/providers/${provider._id}`,
+};
+const DELETE_CONFIRM_WORD = 'DELETE';
+
+const getProviderName = (provider) => {
+  if (provider?.user) {
+    const full = `${provider.user.firstName || ''} ${provider.user.lastName || ''}`.trim();
+    if (full) return full;
+  }
+  if (provider?.businessName && !provider.businessName.includes('undefined')) return provider.businessName;
+  return 'this provider';
+};
 
 // ─── Avatar Component with better fallback ────────────────────────────
 const UserAvatar = ({ user, size = 'md' }) => {
@@ -113,6 +136,11 @@ const AdminProviders = () => {
   const [toast, setToast] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
+  // Permanent delete
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
   const loadProviders = async () => {
     setLoading(true);
     try {
@@ -171,6 +199,43 @@ const AdminProviders = () => {
     } finally {
       setStatusUpdating(false);
       setActionMenuOpen(null);
+    }
+  };
+
+  // ─── Permanent delete ───
+  const openDeleteDialog = (provider) => {
+    setActionMenuOpen(null);
+    setDeleteConfirmText('');
+    setDeleteTarget(provider);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText('');
+  };
+
+  const confirmDeleteProvider = async () => {
+    if (!deleteTarget || deleteConfirmText !== DELETE_CONFIRM_WORD) return;
+    setDeleting(true);
+    try {
+      const res = await apiFetch(PROVIDER_DELETE.path(deleteTarget), { method: PROVIDER_DELETE.method });
+      if (res && res.success === false) {
+        throw new Error(res.message || 'Failed to delete provider');
+      }
+      const name = getProviderName(deleteTarget);
+      setDeleteTarget(null);
+      setDeleteConfirmText('');
+      setShowModal(false);
+      setSelectedProvider(null);
+      showToast(`${name} deleted permanently`);
+      // If this was the last provider on a later page, go one page back; otherwise just reload.
+      if (page > 1 && providers.length <= 1) setPage((p) => p - 1);
+      else await loadProviders();
+    } catch (err) {
+      showToast(err.data?.message || err.message || 'Failed to delete provider', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -375,6 +440,14 @@ const AdminProviders = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => openDeleteDialog(provider)}
+                          className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                          title="Delete permanently"
+                          aria-label={`Delete ${getProviderName(provider)} permanently`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                         <div className="relative">
                           <button
                             onClick={() => setActionMenuOpen(actionMenuOpen === provider._id ? null : provider._id)}
@@ -383,7 +456,7 @@ const AdminProviders = () => {
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                           {actionMenuOpen === provider._id && (
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fadeIn">
+                            <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fadeIn">
                               {user?.status === 'active' ? (
                                 <button
                                   onClick={() => updateStatus(user._id, 'suspended')}
@@ -401,6 +474,14 @@ const AdminProviders = () => {
                                   Activate Provider
                                 </button>
                               )}
+                              <div className="my-1 border-t border-slate-100" />
+                              <button
+                                onClick={() => openDeleteDialog(provider)}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete Permanently
+                              </button>
                             </div>
                           )}
                         </div>
@@ -592,6 +673,84 @@ const AdminProviders = () => {
                     Activate Provider
                   </button>
                 )}
+              </div>
+              <button
+                onClick={() => openDeleteDialog(selectedProvider)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-200 text-red-700 font-semibold hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permanent delete confirmation */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[1050] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn"
+          onClick={closeDeleteDialog}
+          role="presentation"
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-provider-title"
+            aria-describedby="delete-provider-desc"
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-7">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <h2 id="delete-provider-title" className="mt-4 text-xl font-bold text-slate-800 text-center">
+                Delete provider permanently?
+              </h2>
+              <p id="delete-provider-desc" className="mt-2 text-sm text-slate-600 text-center">
+                You are about to permanently delete <span className="font-semibold text-slate-800">{getProviderName(deleteTarget)}</span>.
+                This cannot be undone.
+              </p>
+
+              <div className="mt-4 flex gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <p>If you may want to restore access later, use <b>Suspend</b> instead of deleting.</p>
+              </div>
+
+              <label htmlFor="delete-provider-confirm" className="mt-5 block text-sm font-medium text-slate-700">
+                Type <span className="font-bold text-red-600">{DELETE_CONFIRM_WORD}</span> to confirm
+              </label>
+              <input
+                id="delete-provider-confirm"
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                autoComplete="off"
+                autoFocus
+                disabled={deleting}
+                placeholder={DELETE_CONFIRM_WORD}
+                className="mt-1.5 w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 disabled:opacity-60"
+              />
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeDeleteDialog}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteProvider}
+                  disabled={deleting || deleteConfirmText !== DELETE_CONFIRM_WORD}
+                  className="flex-1 px-4 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {deleting ? 'Deleting...' : 'Delete Permanently'}
+                </button>
               </div>
             </div>
           </div>

@@ -1,13 +1,94 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/djtvxmttf/image/upload/v1792386222/ba77442c-eab7-47fa-8682-4b494e26a630.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PUCHHUU :- THE ART OF CLEAN</title>
+    <meta name="theme-color" content="#0E7C86" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Primary SEO (React pages in tags ko apne hisaab se update karte hain: src/components/Seo.jsx) -->
+    <title>Puchhuu – Book Trusted Home Services Online | AC, Cleaning, Plumbing &amp; More</title>
+    <meta name="description" content="Book verified home service professionals with Puchhuu: AC service &amp; repair, home cleaning, sofa cleaning, plumbing, electrician, painting and more. Transparent pricing, on-time service." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="application-name" content="Puchhuu" />
+
+    <!-- Open Graph / Twitter (WhatsApp, Facebook, LinkedIn preview) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Puchhuu" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:title" content="Puchhuu – Book Trusted Home Services Online" />
+    <meta property="og:description" content="Verified professionals for AC service, home cleaning, plumbing, electrician, painting and more – at your doorstep." />
+    <meta property="og:url" content="https://www.puchhuu.com/" />
+    <meta property="og:image" content="https://res.cloudinary.com/djtvxmttf/image/upload/v1792055959/378c9470-484d-4d3e-b4d1-9054b714fd20.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Puchhuu – Book Trusted Home Services Online" />
+    <meta name="twitter:description" content="Verified professionals for AC service, home cleaning, plumbing, electrician, painting and more – at your doorstep." />
+    <meta name="twitter:image" content="https://res.cloudinary.com/djtvxmttf/image/upload/v1792055959/378c9470-484d-4d3e-b4d1-9054b714fd20.png" />
+
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/djtvxmttf/image/upload/v1792386222/ba77442c-eab7-47fa-8682-4b494e26a630.png" />
+    <link rel="apple-touch-icon" href="https://res.cloudinary.com/djtvxmttf/image/upload/v1792386222/ba77442c-eab7-47fa-8682-4b494e26a630.png" />
+
+    <!-- Speed: in servers se pehle hi connection bana lo -->
+    <link rel="preconnect" href="https://ghar-seva-server-5o5v.onrender.com" crossorigin />
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link id="puchhuu-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+
+    <!-- Structured data: Organization + WebSite -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://www.puchhuu.com/#organization",
+            "name": "Puchhuu",
+            "alternateName": "Puchhuu – The Art of Clean",
+            "url": "https://www.puchhuu.com/",
+            "logo": "https://res.cloudinary.com/djtvxmttf/image/upload/v1792058517/c84c65f3-b34d-403b-b309-ad21b1a71d70.png",
+            "email": "help@puchhuu.com",
+            "areaServed": { "@type": "AdministrativeArea", "name": "Rajasthan, India" }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.puchhuu.com/#website",
+            "url": "https://www.puchhuu.com/",
+            "name": "Puchhuu",
+            "inLanguage": "en-IN",
+            "publisher": { "@id": "https://www.puchhuu.com/#organization" }
+          }
+        ]
+      }
+    </script>
+
+    <!-- App shell: JS aane se pehle bhi page khali/spinner nahi dikhta -->
+    <style>
+      html { background: #fff; }
+      body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+      .shell-bar { height: 64px; border-bottom: 1px solid #eef1f4; display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+      .shell-dot { width: 36px; height: 36px; border-radius: 10px; background: #e3f5f1; }
+      .shell-line { height: 12px; border-radius: 6px; background: #eef1f4; }
+      .shell-hero { margin: 16px; height: 220px; border-radius: 24px; background: linear-gradient(135deg, #f1f9f9, #e4f3f2); }
+      .shell-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 0 16px; }
+      .shell-grid i { height: 68px; border-radius: 999px; background: #eef1f4; display: block; }
+      @media (min-width: 768px) { .shell-hero { height: 340px; margin: 24px 32px; } .shell-grid { grid-template-columns: repeat(6, 1fr); padding: 0 32px; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="shell-bar" aria-hidden="true">
+        <span class="shell-dot"></span>
+        <span class="shell-line" style="width: 110px"></span>
+        <span class="shell-line" style="width: 40%; margin-left: auto"></span>
+      </div>
+      <div class="shell-hero" aria-hidden="true"></div>
+      <div class="shell-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <noscript>
+        <h1>Puchhuu – Book Trusted Home Services Online</h1>
+        <p>AC service &amp; repair, home cleaning, sofa cleaning, plumbing, electrician, painting and more. Please enable JavaScript to book a service.</p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

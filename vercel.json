@@ -1,27 +1,37 @@
 {
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+      "source": "/service/:slug",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(Googlebot|bingbot|DuckDuckBot|YandexBot|Applebot|facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Discordbot|Pinterest).*" }],
+      "destination": "/api/seo?type=service&slug=:slug"
+    },
+    {
+      "source": "/category/:slug",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(Googlebot|bingbot|DuckDuckBot|YandexBot|Applebot|facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Discordbot|Pinterest).*" }],
+      "destination": "/api/seo?type=category&slug=:slug"
+    },
+    { "source": "/((?!api/|assets/|robots.txt|sitemap.xml).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(self)" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
         {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' https://checkout.razorpay.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; img-src 'self' data: blob: https://res.cloudinary.com https://ui-avatars.com https://*.tile.openstreetmap.org https://*.googleusercontent.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.onrender.com wss://*.onrender.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com; frame-src https://api.razorpay.com https://checkout.razorpay.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ]
 }
